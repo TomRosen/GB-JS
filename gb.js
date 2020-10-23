@@ -41,12 +41,37 @@ var SP = 0xFFFE; //stack pointer
 var PC = 0x100; //programm counter
 
 var imm = 921;
+var spimm = 913;
+
+var flags = {
+    'Z': false,
+    'N': false,
+    'H': false,
+    'C': false,
+    'flagByte': function(){
+        var byte = 0;
+        if(Z == true)
+            byte += 8;
+        if(N == true)
+            byte += 4;
+        if(H == true)
+            byte += 2;
+        if(C == true)
+            byte += 1;
+        return (byte << 4);
+    }
+}
 
 //Bus
 function write(addr, data ){ //write data to memory
     if(addr >= 0x0000 && addr <= 0xFFFF){
         memory[addr] = data;
     }     
+}
+
+function write16bit(addr, data1, data2){ //write 2 Byte to memory
+    write(addr, data1);
+    write(addr+1, data2)
 }
 
 function read(addr){ //return data from memory
@@ -58,6 +83,13 @@ function read(addr){ //return data from memory
 
 function dec2bin(dec){
     return (dec >>> 0).toString(2);
+}
+
+function signed(a){
+    if(a > 127)
+        return (a - 256);
+    else
+        a;
 }
 
 //opcode functions
@@ -173,10 +205,35 @@ function ldh(a,b){
 }
 
 function ld16(a,b,c){//ld 16-bit
-    if(c==imm){
+    if(c==imm){//ld n,nn
         register[a] = read(PC+2);
         register[b] = read(PC+1);
+        PC += 3;
+        return 12;
+    }else if(c==spimm){
+        if(a==SP && b==spimm){//ld SP,nn
+            SP = read(PC+1) + (read(PC+2)<<8);
+            PC += 3;
+            return 12; 
+        }else{//ld (nn),SP
+            write( (read(PC+2)<<8) + read(PC+1), SP&0xFF, SP>>8);
+            PC += 3;
+            return 20;
+        }   
+    }else{//ld SP,HL
+        SP = regsiter[H]<<8 + register[L];
+        PC =+ 1;
+        return 8;
     }
+}
+
+function ldhl(){
+    var n = signed(read(PC+1));  
+    var spn = SP + n;
+    flags.H = (((SP&0xF)+(n&0xF))>=0x10) ? (true) : (false);
+    flags.C = (((SP&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.Z = false;
+    flags.N = false;
 }
 
 
@@ -184,14 +241,14 @@ function ld16(a,b,c){//ld 16-bit
 opcodes = new Uint8Array(0x1000);
 
 opcodes[ 0x00 ] = nop(4); //NOP
-opcodes[ 0x01 ] = 
+opcodes[ 0x01 ] = ld16(B,C,imm); //ld BC,nn
 opcodes[ 0x02 ] = ld_to_mem(B,C,A); //ld (BC),A
 opcodes[ 0x03 ] = 
 opcodes[ 0x04 ] = 
 opcodes[ 0x05 ] = 
 opcodes[ 0x06 ] = ld_imm(B); //ld B,n
 opcodes[ 0x07 ] = 
-opcodes[ 0x08 ] = 
+opcodes[ 0x08 ] = ld16(SP,SP,spimm); //ld (nn),SP
 opcodes[ 0x09 ] = 
 opcodes[ 0x0A ] = ld_from_mem(A,B,C); //ld A,(BC)
 opcodes[ 0x0B ] = 
@@ -200,7 +257,7 @@ opcodes[ 0x0D ] =
 opcodes[ 0x0E ] = ld_imm(C); //ld C,n
 opcodes[ 0x0F ] = 
 opcodes[ 0x10 ] = 
-opcodes[ 0x11 ] = 
+opcodes[ 0x11 ] = ld16(D,E,imm); //ld DE,nn
 opcodes[ 0x12 ] = ld_to_mem(D,E,A); //ld (DE),A
 opcodes[ 0x13 ] = 
 opcodes[ 0x14 ] = 
@@ -216,7 +273,7 @@ opcodes[ 0x1D ] =
 opcodes[ 0x1E ] = ld_imm(E); //ld E,n
 opcodes[ 0x1F ] = 
 opcodes[ 0x20 ] = 
-opcodes[ 0x21 ] = 
+opcodes[ 0x21 ] = ld16(H,L,imm); //ld HL,nn
 opcodes[ 0x22 ] = ldi(HL,A); //ld (HL+),A
 opcodes[ 0x23 ] = 
 opcodes[ 0x24 ] = 
@@ -232,7 +289,7 @@ opcodes[ 0x2D ] =
 opcodes[ 0x2E ] = ld_imm(L); //ld L,n
 opcodes[ 0x2F ] = 
 opcodes[ 0x30 ] = 
-opcodes[ 0x31 ] = 
+opcodes[ 0x31 ] = ld(SP,spimm,spimm); //ld SP,nn
 opcodes[ 0x32 ] = ldd(HL,A); //ld (HL-),A
 opcodes[ 0x33 ] = 
 opcodes[ 0x34 ] = 
@@ -431,8 +488,8 @@ opcodes[ 0xF4 ] = unused
 opcodes[ 0xF5 ] = 
 opcodes[ 0xF6 ] = 
 opcodes[ 0xF7 ] = 
-opcodes[ 0xF8 ] = 
-opcodes[ 0xF9 ] = 
+opcodes[ 0xF8 ] = ldhl(); //ldhl SP,n
+opcodes[ 0xF9 ] = ld16(HL,SP,HL); //ld SP,HL
 opcodes[ 0xFA ] = ld_from_mem_imm(A); //ldd A,(nn)
 opcodes[ 0xFB ] = 
 opcodes[ 0xFC ] = unused
