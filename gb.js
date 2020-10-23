@@ -40,6 +40,8 @@ const L = (1 << 7); //HL 2 Byte register used to store memory addresses
 var SP = 0xFFFE; //stack pointer
 var PC = 0x100; //programm counter
 
+var imm = 921;
+
 //Bus
 function write(addr, data ){ //write data to memory
     if(addr >= 0x0000 && addr <= 0xFFFF){
@@ -95,7 +97,7 @@ function ld_to_mem(a,b,c){ //write to defined memory location
 }
 
 function ld_to_mem_imm(a,b){
-    if(b == to_imm){ //write to next immediate mem location
+    if(b == imm){ //write to next immediate mem location
         write( (read(PC+2)<<8) + read(PC+1), register[a])
         PC += 3;
         return 16;
@@ -115,6 +117,65 @@ function ldac(a,b){
         write(0xFF00 + register[a], register[b]);
         PC += 1;
         return 8;
+    }
+}
+
+function ldd(a,b){//ld decrease
+    if(a==HL){//write to (HL)
+        write(register[L] + (register[H]<<8), register[b]);
+        if(register[L]==0)
+            register[H] -= 1;
+        else
+            register[L] -= 1;
+        PC += 1;
+        return 8;
+    }else{ //read from (HL)
+        register[b] = read(register[L] + (register[H]<<8));
+        if(register[L]==0)
+            register[H] -= 1;
+        else
+            register[L] -= 1;
+        PC += 1;
+        return 8;
+    }
+}
+
+function ldi(a,b){//ld increase
+    if(a==HL){//write to (HL)
+        write(register[L] + (register[H]<<8), register[b]);
+        if(register[L]==255)
+            register[H] += 1;
+        else
+            register[L] += 1;
+        PC += 1;
+        return 8;
+    }else{ //read from (HL)
+        register[b] = read(register[L] + (register[H]<<8));
+        if(register[L]==255)
+            register[H] += 1;
+        else
+            register[L] += 1;
+        PC += 1;
+        return 8;
+    }
+}
+
+function ldh(a,b){
+    if(a==imm){//write register to 0xFF00+n
+        write(0xFF00+read(PC+1), register[b]);
+        PC += 2;
+        return 8;
+    }else{//read from 0xFF00+n
+        register[a] = read(0xFF00+read(PC+1));
+        PC += 2;
+        return 8;
+    }
+}
+
+function ld16(a,b,c){//ld 16-bit
+    if(c==imm){
+        register[a] = read(PC+2);
+        register[b] = read(PC+1);
     }
 }
 
@@ -156,7 +217,7 @@ opcodes[ 0x1E ] = ld_imm(E); //ld E,n
 opcodes[ 0x1F ] = 
 opcodes[ 0x20 ] = 
 opcodes[ 0x21 ] = 
-opcodes[ 0x22 ] = 
+opcodes[ 0x22 ] = ldi(HL,A); //ld (HL+),A
 opcodes[ 0x23 ] = 
 opcodes[ 0x24 ] = 
 opcodes[ 0x25 ] = 
@@ -164,7 +225,7 @@ opcodes[ 0x26 ] = ld_imm(H); //ld H,n
 opcodes[ 0x27 ] = 
 opcodes[ 0x28 ] = 
 opcodes[ 0x29 ] = 
-opcodes[ 0x2A ] = 
+opcodes[ 0x2A ] = ldi(A,HL); //ld A,(HL+)
 opcodes[ 0x2B ] = 
 opcodes[ 0x2C ] = 
 opcodes[ 0x2D ] = 
@@ -172,7 +233,7 @@ opcodes[ 0x2E ] = ld_imm(L); //ld L,n
 opcodes[ 0x2F ] = 
 opcodes[ 0x30 ] = 
 opcodes[ 0x31 ] = 
-opcodes[ 0x32 ] = 
+opcodes[ 0x32 ] = ldd(HL,A); //ld (HL-),A
 opcodes[ 0x33 ] = 
 opcodes[ 0x34 ] = 
 opcodes[ 0x35 ] = 
@@ -180,7 +241,7 @@ opcodes[ 0x36 ] = ld_to_mem_imm(H,L); //ld (HL),n
 opcodes[ 0x37 ] = 
 opcodes[ 0x38 ] = 
 opcodes[ 0x39 ] = 
-opcodes[ 0x3A ] = 
+opcodes[ 0x3A ] = ldd(A,HL); //ld A,(HL-)
 opcodes[ 0x3B ] = 
 opcodes[ 0x3C ] = 
 opcodes[ 0x3D ] = 
@@ -346,7 +407,7 @@ opcodes[ 0xDC ] =
 opcodes[ 0xDD ] = unused
 opcodes[ 0xDE ] = 
 opcodes[ 0xDF ] = 
-opcodes[ 0xE0 ] = 
+opcodes[ 0xE0 ] = ldh(imm,A); //ld ($FF00+n),A
 opcodes[ 0xE1 ] = 
 opcodes[ 0xE2 ] = ld(C,A); //ld (C),A
 opcodes[ 0xE3 ] = unused
@@ -356,13 +417,13 @@ opcodes[ 0xE6 ] =
 opcodes[ 0xE7 ] = 
 opcodes[ 0xE8 ] = unused
 opcodes[ 0xE9 ] = 
-opcodes[ 0xEA ] = ld_to_mem_imm(A,to_imm); //ld (nn),A
+opcodes[ 0xEA ] = ld_to_mem_imm(A,imm); //ld (nn),A
 opcodes[ 0xEB ] = 
 opcodes[ 0xEC ] = unused 
 opcodes[ 0xED ] = unused
 opcodes[ 0xEE ] = 
 opcodes[ 0xEF ] = 
-opcodes[ 0xF0 ] = 
+opcodes[ 0xF0 ] = ldh(A,imm); //ld A,($FF00+n)
 opcodes[ 0xF1 ] = 
 opcodes[ 0xF2 ] = ld(A,C); //ld A,(C)
 opcodes[ 0xF3 ] = 
