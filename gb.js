@@ -259,7 +259,7 @@ function pop(a,b){
 function add(a){ //add register n to register A
     register[A] += register[a];
     flags.H = (((register[A]&0xF)+(register[a]&0xF))>=0x10) ? (true) : (false);
-    flags.C = (((register[A]&0xFF)+(register[a]&0xFF))>=0x100) ? (true) : (false);
+    flags.C = ((register[A]+register[a])<register[A]) ? (true) : (false);
     flags.Z = (register[A] == 0) ? (true) : (false);
     flags.N = false;
     PC += 1;
@@ -278,7 +278,7 @@ function add_from_mem(a,b){ //add byte from memory to register A
     }
     
     flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
-    flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.C = ((register[A]+n)<register[A]) ? (true) : (false);
     flags.Z = (register[A] == 0) ? (true) : (false);
     flags.N = false;
     return 8;
@@ -288,7 +288,7 @@ function adc(a){ //add register n + flag C to register A
     var n = register[a] + flags.C;
     register[A] += n;
     flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
-    flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.C = ((register[A]+n)<register[A]) ? (true) : (false);
     flags.Z = (register[A] == 0) ? (true) : (false);
     flags.N = false;
     PC += 1;
@@ -306,7 +306,63 @@ function adc_from_mem(a,b){ //add memory byte + flag C to register A
         PC += 2;
     }
     flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
-    flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.C = ((register[A]+n)<register[A]) ? (true) : (false);
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    return 8;
+}
+
+function sbb(a){ //add register n to register A
+    register[A] -= register[a];
+   //flags.H = (((register[A]&0xF)+(register[a]&0xF))>=0x10) ? (true) : (false);
+   //flags.C = (((register[A]&0xFF)+(register[a]&0xFF))>=0x100) ? (true) : (false);
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    PC += 1;
+    return 4;
+}
+
+function sbb_from_mem(a,b){ //add byte from memory to register A
+    if(a==H && b==L){
+        var n = read( (register[a]<<8) + register[b]);
+        regsiter[A] -=  n;
+        PC += 1;
+    }else{
+        var n = read(PC+1);
+        register[A] -= n;
+        PC += 2;
+    }
+    
+    //flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
+    //flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    return 8;
+}
+
+function sbc(a){ //add register n + flag C to register A
+    var n = register[a] - flags.C;
+    register[A] -= n;
+    //flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
+    //flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    PC += 1;
+    return 4;
+}
+
+function sbc_from_mem(a,b){ //add memory byte + flag C to register A
+    if(a==H && b==L){
+        var n = read( (register[a]<<8) + register[b]) - flags.C;
+        regsiter[A] -=  n;
+        PC += 1;
+    }else{
+        var n = read(PC+1) - flags.C;
+        register[A] -= n;
+        PC += 2;
+    }
+    //flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
+    //flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
     flags.Z = (register[A] == 0) ? (true) : (false);
     flags.N = false;
     return 8;
