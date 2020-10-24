@@ -234,6 +234,82 @@ function ldhl(){
     flags.C = (((SP&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
     flags.Z = false;
     flags.N = false;
+    PC += 2;
+    return 12;
+}
+
+function push(a,b){
+    SP -= 1;
+    write(SP,a);
+    SP -= 1;
+    write(SP,b);
+    PC += 1;
+    return 16;
+}
+
+function pop(a,b){
+    register[b] = read(SP);
+    SP += 1;
+    register[a] = read(SP);
+    SP += 1;
+    PC += 1;
+    return 12;
+}
+
+function add(a){ //add register n to register A
+    register[A] += register[a];
+    flags.H = (((register[A]&0xF)+(register[a]&0xF))>=0x10) ? (true) : (false);
+    flags.C = (((register[A]&0xFF)+(register[a]&0xFF))>=0x100) ? (true) : (false);
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    PC += 1;
+    return 4;
+}
+
+function add_from_mem(a,b){ //add byte from memory to register A
+    if(a==H && b==L){
+        var n = read( (register[a]<<8) + register[b]);
+        regsiter[A] +=  n;
+        PC += 1;
+    }else{
+        var n = read(PC+1);
+        register[A] += n;
+        PC += 2;
+    }
+    
+    flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
+    flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    return 8;
+}
+
+function adc(a){ //add register n + flag C to register A
+    var n = register[a] + flags.C;
+    register[A] += n;
+    flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
+    flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    PC += 1;
+    return 4;
+}
+
+function adc_from_mem(a,b){ //add memory byte + flag C to register A
+    if(a==H && b==L){
+        var n = read( (register[a]<<8) + register[b]) + flags.C;
+        regsiter[A] +=  n;
+        PC += 1;
+    }else{
+        var n = read(PC+1) + flags.C;
+        register[A] += n;
+        PC += 2;
+    }
+    flags.H = (((register[A]&0xF)+(n&0xF))>=0x10) ? (true) : (false);
+    flags.C = (((register[A]&0xFF)+(n&0xFF))>=0x100) ? (true) : (false);
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    return 8;
 }
 
 
@@ -368,22 +444,22 @@ opcodes[ 0x7C ] = ld(A,H); //ld A,H
 opcodes[ 0x7D ] = ld(A,L); //ld A,L
 opcodes[ 0x7E ] = ld_from_mem(A,H,L); //ld A,(HL)
 opcodes[ 0x7F ] = ld(A,A); //ld A,A
-opcodes[ 0x80 ] = 
-opcodes[ 0x81 ] = 
-opcodes[ 0x82 ] = 
-opcodes[ 0x83 ] = 
-opcodes[ 0x84 ] = 
-opcodes[ 0x85 ] = 
-opcodes[ 0x86 ] = 
-opcodes[ 0x87 ] = 
-opcodes[ 0x88 ] = 
-opcodes[ 0x89 ] = 
-opcodes[ 0x8A ] = 
-opcodes[ 0x8B ] = 
-opcodes[ 0x8C ] = 
-opcodes[ 0x8D ] = 
-opcodes[ 0x8E ] = 
-opcodes[ 0x8F ] = 
+opcodes[ 0x80 ] = add(B); //add A,B
+opcodes[ 0x81 ] = add(C); //add A,C
+opcodes[ 0x82 ] = add(D); //add A,D
+opcodes[ 0x83 ] = add(E); //add A,E
+opcodes[ 0x84 ] = add(H); //add A,H
+opcodes[ 0x85 ] = add(L); //add A,L
+opcodes[ 0x86 ] = add_from_mem(H,L); //add A,(HL)
+opcodes[ 0x87 ] = add(A); //add A,A
+opcodes[ 0x88 ] = adc(B); //adc A,B
+opcodes[ 0x89 ] = adc(C); //adc A,C
+opcodes[ 0x8A ] = adc(D); //adc A,D
+opcodes[ 0x8B ] = adc(E); //adc A,E
+opcodes[ 0x8C ] = adc(H); //adc A,H
+opcodes[ 0x8D ] = adc(L); //adc A,L
+opcodes[ 0x8E ] = adc_from_mem(H,L); //adc A,(HL)
+opcodes[ 0x8F ] = adc(A); //adc A,A
 opcodes[ 0x90 ] = 
 opcodes[ 0x91 ] = 
 opcodes[ 0x92 ] = 
@@ -433,12 +509,12 @@ opcodes[ 0xBD ] =
 opcodes[ 0xBE ] = 
 opcodes[ 0xBF ] = 
 opcodes[ 0xC0 ] = 
-opcodes[ 0xC1 ] = 
+opcodes[ 0xC1 ] = pop(B,C); //pop BC
 opcodes[ 0xC2 ] = 
 opcodes[ 0xC3 ] = 
 opcodes[ 0xC4 ] = 
-opcodes[ 0xC5 ] = 
-opcodes[ 0xC6 ] = 
+opcodes[ 0xC5 ] = push(B,C); //push BC
+opcodes[ 0xC6 ] = add_from_mem(A,imm); //add A,#
 opcodes[ 0xC7 ] = 
 opcodes[ 0xC8 ] = 
 opcodes[ 0xC9 ] = 
@@ -446,14 +522,14 @@ opcodes[ 0xCA ] =
 opcodes[ 0xCB ] = 
 opcodes[ 0xCC ] = 
 opcodes[ 0xCD ] = 
-opcodes[ 0xCE ] = 
+opcodes[ 0xCE ] = adc_from_mem(A,imm); //adc A,#
 opcodes[ 0xCF ] = 
 opcodes[ 0xD0 ] = 
-opcodes[ 0xD1 ] = 
+opcodes[ 0xD1 ] = pop(D,E); //pop DE
 opcodes[ 0xD2 ] = 
 opcodes[ 0xD3 ] = unused
 opcodes[ 0xD4 ] = 
-opcodes[ 0xD5 ] = 
+opcodes[ 0xD5 ] = push(D,E); //push DE
 opcodes[ 0xD6 ] = 
 opcodes[ 0xD7 ] = 
 opcodes[ 0xD8 ] = unused
@@ -465,11 +541,11 @@ opcodes[ 0xDD ] = unused
 opcodes[ 0xDE ] = 
 opcodes[ 0xDF ] = 
 opcodes[ 0xE0 ] = ldh(imm,A); //ld ($FF00+n),A
-opcodes[ 0xE1 ] = 
+opcodes[ 0xE1 ] = pop(H,L); //pop HL
 opcodes[ 0xE2 ] = ld(C,A); //ld (C),A
 opcodes[ 0xE3 ] = unused
 opcodes[ 0xE4 ] = unused
-opcodes[ 0xE5 ] = 
+opcodes[ 0xE5 ] = push(H,L); //push HL
 opcodes[ 0xE6 ] = 
 opcodes[ 0xE7 ] = 
 opcodes[ 0xE8 ] = unused
@@ -481,11 +557,11 @@ opcodes[ 0xED ] = unused
 opcodes[ 0xEE ] = 
 opcodes[ 0xEF ] = 
 opcodes[ 0xF0 ] = ldh(A,imm); //ld A,($FF00+n)
-opcodes[ 0xF1 ] = 
+opcodes[ 0xF1 ] = pop(A,F); //pop AF
 opcodes[ 0xF2 ] = ld(A,C); //ld A,(C)
 opcodes[ 0xF3 ] = 
 opcodes[ 0xF4 ] = unused
-opcodes[ 0xF5 ] = 
+opcodes[ 0xF5 ] = push(A,F); //push AF
 opcodes[ 0xF6 ] = 
 opcodes[ 0xF7 ] = 
 opcodes[ 0xF8 ] = ldhl(); //ldhl SP,n
@@ -496,5 +572,3 @@ opcodes[ 0xFC ] = unused
 opcodes[ 0xFD ] = unused
 opcodes[ 0xFE ] = 
 opcodes[ 0xFF ] = 
-
-
