@@ -477,6 +477,23 @@ function cp_from_mem(a,b){ //add byte from memory to register A
     return 8;
 }
 
+function inc(a,b){
+    if(a == H && b == L){
+        var n = read( (register[a]<<8) + register[b]);
+        n += 1;
+        PC += 1;
+        return 12;
+    }else{
+        register[a] += 1; 
+        //flags.H = (((register[A]&0xF0)-(n&0xF0))<0x10) ? (true) : (false);
+        flags.Z = (register[a] == 0) ? (true) : (false);
+        flags.N = false;
+        PC += 1
+        return 4;
+    }
+    
+}
+
 
 //opcode array
 opcodes = new Uint8Array(0x1000);
@@ -485,7 +502,7 @@ opcodes[ 0x00 ] = nop(4); //NOP
 opcodes[ 0x01 ] = ld16(B,C,imm); //ld BC,nn
 opcodes[ 0x02 ] = ld_to_mem(B,C,A); //ld (BC),A
 opcodes[ 0x03 ] = 
-opcodes[ 0x04 ] = 
+opcodes[ 0x04 ] = inc(B,B); //inc B
 opcodes[ 0x05 ] = 
 opcodes[ 0x06 ] = ld_imm(B); //ld B,n
 opcodes[ 0x07 ] = 
@@ -493,7 +510,7 @@ opcodes[ 0x08 ] = ld16(SP,SP,spimm); //ld (nn),SP
 opcodes[ 0x09 ] = 
 opcodes[ 0x0A ] = ld_from_mem(A,B,C); //ld A,(BC)
 opcodes[ 0x0B ] = 
-opcodes[ 0x0C ] = 
+opcodes[ 0x0C ] = inc(C,C); //inc C 
 opcodes[ 0x0D ] = 
 opcodes[ 0x0E ] = ld_imm(C); //ld C,n
 opcodes[ 0x0F ] = 
@@ -501,7 +518,7 @@ opcodes[ 0x10 ] =
 opcodes[ 0x11 ] = ld16(D,E,imm); //ld DE,nn
 opcodes[ 0x12 ] = ld_to_mem(D,E,A); //ld (DE),A
 opcodes[ 0x13 ] = 
-opcodes[ 0x14 ] = 
+opcodes[ 0x14 ] = inc(D,D); //inc D
 opcodes[ 0x15 ] = 
 opcodes[ 0x16 ] = ld_imm(D); //ld D,n
 opcodes[ 0x17 ] = 
@@ -509,7 +526,7 @@ opcodes[ 0x18 ] =
 opcodes[ 0x19 ] = 
 opcodes[ 0x1A ] = ld_from_mem(A,D,E); //ld A,(DE)
 opcodes[ 0x1B ] = 
-opcodes[ 0x1C ] = 
+opcodes[ 0x1C ] = inc(E,E); //inc E
 opcodes[ 0x1D ] = 
 opcodes[ 0x1E ] = ld_imm(E); //ld E,n
 opcodes[ 0x1F ] = 
@@ -517,7 +534,7 @@ opcodes[ 0x20 ] =
 opcodes[ 0x21 ] = ld16(H,L,imm); //ld HL,nn
 opcodes[ 0x22 ] = ldi(HL,A); //ld (HL+),A
 opcodes[ 0x23 ] = 
-opcodes[ 0x24 ] = 
+opcodes[ 0x24 ] = inc(H,H); //inc H
 opcodes[ 0x25 ] = 
 opcodes[ 0x26 ] = ld_imm(H); //ld H,n
 opcodes[ 0x27 ] = 
@@ -525,7 +542,7 @@ opcodes[ 0x28 ] =
 opcodes[ 0x29 ] = 
 opcodes[ 0x2A ] = ldi(A,HL); //ld A,(HL+)
 opcodes[ 0x2B ] = 
-opcodes[ 0x2C ] = 
+opcodes[ 0x2C ] = inc(L,L); //inc L
 opcodes[ 0x2D ] = 
 opcodes[ 0x2E ] = ld_imm(L); //ld L,n
 opcodes[ 0x2F ] = 
@@ -541,7 +558,7 @@ opcodes[ 0x38 ] =
 opcodes[ 0x39 ] = 
 opcodes[ 0x3A ] = ldd(A,HL); //ld A,(HL-)
 opcodes[ 0x3B ] = 
-opcodes[ 0x3C ] = 
+opcodes[ 0x3C ] = inc(A,A); //inc A
 opcodes[ 0x3D ] = 
 opcodes[ 0x3E ] = ld_imm(A); //ld A,#
 opcodes[ 0x3F ] = 
