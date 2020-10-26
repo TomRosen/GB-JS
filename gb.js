@@ -312,17 +312,17 @@ function adc_from_mem(a,b){ //add memory byte + flag C to register A
     return 8;
 }
 
-function sbb(a){ //add register n to register A
+function sub(a){ //add register n to register A
     register[A] -= register[a];
     flags.H = (((register[A]&0xF0)-(register[a]&0xF0))<0x10) ? (true) : (false);
     flags.C = ((register[A]-register[a])>register[A]) ? (true) : (false);
     flags.Z = (register[A] == 0) ? (true) : (false);
-    flags.N = false;
+    flags.N = true;
     PC += 1;
     return 4;
 }
 
-function sbb_from_mem(a,b){ //add byte from memory to register A
+function sub_from_mem(a,b){ //add byte from memory to register A
     if(a==H && b==L){
         var n = read( (register[a]<<8) + register[b]);
         regsiter[A] -=  n;
@@ -336,7 +336,7 @@ function sbb_from_mem(a,b){ //add byte from memory to register A
     flags.H = (((register[A]&0xF0)-(n&0xF0))<0x10) ? (true) : (false);
     flags.C = ((register[A]-n)>register[A]) ? (true) : (false);
     flags.Z = (register[A] == 0) ? (true) : (false);
-    flags.N = false;
+    flags.N = true;
     return 8;
 }
 
@@ -346,7 +346,7 @@ function sbc(a){ //add register n + flag C to register A
     flags.H = (((register[A]&0xF0)-(n&0xF0))<0x10) ? (true) : (false);
     flags.C = ((register[A]-n)>register[A]) ? (true) : (false);
     flags.Z = (register[A] == 0) ? (true) : (false);
-    flags.N = false;
+    flags.N = true;
     PC += 1;
     return 4;
 }
@@ -364,7 +364,116 @@ function sbc_from_mem(a,b){ //add memory byte + flag C to register A
     flags.H = (((register[A]&0xF0)-(n&0xF0))<0x10) ? (true) : (false);
     flags.C = ((register[A]-n)>register[A]) ? (true) : (false);
     flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = true;
+    return 8;
+}
+
+function and(a){
+    register[A] &= register[a];
+    flags.H = true;
+    flags.C = false;
+    flags.Z = (register[A] == 0) ? (true) : (false);
     flags.N = false;
+    PC += 1;
+    return 4;
+}
+
+function and_from_mem(a,b){
+    if(a==H && b==L){
+        var n = read( (register[a]<<8) + register[b]);
+        regsiter[A] &= n;
+        PC += 1;
+    }else{
+        var n = read(PC+1);
+        register[A] = rregister[A]&n;
+        PC += 2;
+    }
+    flags.H = true;
+    flags.C = false;
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    return 8;
+}
+
+function or(a){
+    register[A] |= register[a];
+    flags.H = false;
+    flags.C = false;
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    PC += 1;
+    return 4;
+}
+
+function or_from_mem(a,b){
+    if(a==H && b==L){
+        var n = read( (register[a]<<8) + register[b]);
+        regsiter[A] |= n;
+        PC += 1;
+    }else{
+        var n = read(PC+1);
+        register[A] = rregister[A]&n;
+        PC += 2;
+    }
+    flags.H = false;
+    flags.C = false;
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    return 8;
+}
+
+function xor(a){
+    register[A] ^= register[a];
+    flags.H = false;
+    flags.C = false;
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    PC += 1;
+    return 4;
+}
+
+function xor_from_mem(a,b){
+    if(a==H && b==L){
+        var n = read( (register[a]<<8) + register[b]);
+        regsiter[A] ^= n;
+        PC += 1;
+    }else{
+        var n = read(PC+1);
+        register[A] = rregister[A]&n;
+        PC += 2;
+    }
+    flags.H = false;
+    flags.C = false;
+    flags.Z = (register[A] == 0) ? (true) : (false);
+    flags.N = false;
+    return 8;
+}
+
+function cp(a){ //add register n to register A
+    register[A] -= register[a];
+    flags.H = (((register[A]&0xF0)-(register[a]&0xF0))<0x10) ? (true) : (false);
+    flags.C = (register[A] < register[a]) ? (true) : (false);
+    flags.Z = (register[A] == register[a]) ? (true) : (false);
+    flags.N = true;
+    PC += 1;
+    return 4;
+}
+
+function cp_from_mem(a,b){ //add byte from memory to register A
+    if(a==H && b==L){
+        var n = read( (register[a]<<8) + register[b]);
+        regsiter[A] -=  n;
+        PC += 1;
+    }else{
+        var n = read(PC+1);
+        register[A] -= n;
+        PC += 2;
+    }
+    
+    flags.H = (((register[A]&0xF0)-(n&0xF0))<0x10) ? (true) : (false);
+    flags.C = (register[A] < n) ? (true) : (false);
+    flags.Z = (register[A] == n) ? (true) : (false);
+    flags.N = true;
     return 8;
 }
 
@@ -516,54 +625,54 @@ opcodes[ 0x8C ] = adc(H); //adc A,H
 opcodes[ 0x8D ] = adc(L); //adc A,L
 opcodes[ 0x8E ] = adc_from_mem(H,L); //adc A,(HL)
 opcodes[ 0x8F ] = adc(A); //adc A,A
-opcodes[ 0x90 ] = 
-opcodes[ 0x91 ] = 
-opcodes[ 0x92 ] = 
-opcodes[ 0x93 ] = 
-opcodes[ 0x94 ] = 
-opcodes[ 0x95 ] = 
-opcodes[ 0x96 ] = 
-opcodes[ 0x97 ] = 
-opcodes[ 0x98 ] = 
-opcodes[ 0x99 ] = 
-opcodes[ 0x9A ] = 
-opcodes[ 0x9B ] = 
-opcodes[ 0x9C ] = 
-opcodes[ 0x9D ] = 
-opcodes[ 0x9E ] = 
-opcodes[ 0x9F ] = 
-opcodes[ 0xA0 ] = 
-opcodes[ 0xA1 ] = 
-opcodes[ 0xA2 ] = 
-opcodes[ 0xA3 ] = 
-opcodes[ 0xA4 ] = 
-opcodes[ 0xA5 ] = 
-opcodes[ 0xA6 ] = 
-opcodes[ 0xA7 ] = 
-opcodes[ 0xA8 ] = 
-opcodes[ 0xA9 ] = 
-opcodes[ 0xAA ] = 
-opcodes[ 0xAB ] = 
-opcodes[ 0xAC ] = 
-opcodes[ 0xAD ] = 
-opcodes[ 0xAE ] = 
-opcodes[ 0xAF ] = 
-opcodes[ 0xB0 ] = 
-opcodes[ 0xB1 ] = 
-opcodes[ 0xB2 ] = 
-opcodes[ 0xB3 ] = 
-opcodes[ 0xB4 ] = 
-opcodes[ 0xB5 ] = 
-opcodes[ 0xB6 ] = 
-opcodes[ 0xB7 ] = 
-opcodes[ 0xB8 ] = 
-opcodes[ 0xB9 ] = 
-opcodes[ 0xBA ] = 
-opcodes[ 0xBB ] = 
-opcodes[ 0xBC ] = 
-opcodes[ 0xBD ] = 
-opcodes[ 0xBE ] = 
-opcodes[ 0xBF ] = 
+opcodes[ 0x90 ] = sub(B); //sub B
+opcodes[ 0x91 ] = sub(C); //sub C
+opcodes[ 0x92 ] = sub(D); //sub D
+opcodes[ 0x93 ] = sub(E); //sub E
+opcodes[ 0x94 ] = sub(H); //sub H
+opcodes[ 0x95 ] = sub(L); //sub L
+opcodes[ 0x96 ] = sub_from_mem(H,L); //sub (HL)
+opcodes[ 0x97 ] = sub(A); // sub A
+opcodes[ 0x98 ] = sbc(B); //sbc A,B
+opcodes[ 0x99 ] = sbc(C); //sbc A,C
+opcodes[ 0x9A ] = sbc(D); //sbc A,D
+opcodes[ 0x9B ] = sbc(E); //sbc A,E
+opcodes[ 0x9C ] = sbc(H); //sbc A,H
+opcodes[ 0x9D ] = sbc(L); //sbc A,L
+opcodes[ 0x9E ] = sbc_from_mem(H,L); //sbc A,(HL)
+opcodes[ 0x9F ] = sbc(A); //sbc A,A
+opcodes[ 0xA0 ] = and(B); //and B
+opcodes[ 0xA1 ] = and(C); //and C
+opcodes[ 0xA2 ] = and(D); //and D
+opcodes[ 0xA3 ] = and(E); //and E
+opcodes[ 0xA4 ] = and(H); //and H
+opcodes[ 0xA5 ] = and(L); //and L
+opcodes[ 0xA6 ] = and_from_mem(H,L); //and (HL)
+opcodes[ 0xA7 ] = and(A); //and A
+opcodes[ 0xA8 ] = xor(B); //xor B
+opcodes[ 0xA9 ] = xor(C); //xor C
+opcodes[ 0xAA ] = xor(D); //xor D
+opcodes[ 0xAB ] = xor(E); //xor E
+opcodes[ 0xAC ] = xor(H); //xor H
+opcodes[ 0xAD ] = xor(L); //xor L
+opcodes[ 0xAE ] = xor_from_mem(H,L); //xor (HL)
+opcodes[ 0xAF ] = xor(A); //xor A
+opcodes[ 0xB0 ] = or(B); //or B
+opcodes[ 0xB1 ] = or(C); //or C
+opcodes[ 0xB2 ] = or(D); //or D
+opcodes[ 0xB3 ] = or(E); //or E
+opcodes[ 0xB4 ] = or(H); //or H
+opcodes[ 0xB5 ] = or(L); //or L
+opcodes[ 0xB6 ] = or_from_mem(H,L); //or (HL)
+opcodes[ 0xB7 ] = or(A); //or A
+opcodes[ 0xB8 ] = cp(B); //cp B
+opcodes[ 0xB9 ] = cp(C); //cp C
+opcodes[ 0xBA ] = cp(D); //cp D
+opcodes[ 0xBB ] = cp(E); //cp E
+opcodes[ 0xBC ] = cp(H); //cp H
+opcodes[ 0xBD ] = cp(L); //cp L
+opcodes[ 0xBE ] = cp_from_mem(H,L); //cp (HL)
+opcodes[ 0xBF ] = cp(A); //cp A
 opcodes[ 0xC0 ] = 
 opcodes[ 0xC1 ] = pop(B,C); //pop BC
 opcodes[ 0xC2 ] = 
@@ -586,7 +695,7 @@ opcodes[ 0xD2 ] =
 opcodes[ 0xD3 ] = unused
 opcodes[ 0xD4 ] = 
 opcodes[ 0xD5 ] = push(D,E); //push DE
-opcodes[ 0xD6 ] = 
+opcodes[ 0xD6 ] = sub_from_mem(A,imm); //sub #
 opcodes[ 0xD7 ] = 
 opcodes[ 0xD8 ] = unused
 opcodes[ 0xD9 ] = 
@@ -602,7 +711,7 @@ opcodes[ 0xE2 ] = ld(C,A); //ld (C),A
 opcodes[ 0xE3 ] = unused
 opcodes[ 0xE4 ] = unused
 opcodes[ 0xE5 ] = push(H,L); //push HL
-opcodes[ 0xE6 ] = 
+opcodes[ 0xE6 ] = and_from_mem(A,imm); //and #
 opcodes[ 0xE7 ] = 
 opcodes[ 0xE8 ] = unused
 opcodes[ 0xE9 ] = 
@@ -610,7 +719,7 @@ opcodes[ 0xEA ] = ld_to_mem_imm(A,imm); //ld (nn),A
 opcodes[ 0xEB ] = 
 opcodes[ 0xEC ] = unused 
 opcodes[ 0xED ] = unused
-opcodes[ 0xEE ] = 
+opcodes[ 0xEE ] = xor(A,imm); //xor # 
 opcodes[ 0xEF ] = 
 opcodes[ 0xF0 ] = ldh(A,imm); //ld A,($FF00+n)
 opcodes[ 0xF1 ] = pop(A,F); //pop AF
@@ -618,7 +727,7 @@ opcodes[ 0xF2 ] = ld(A,C); //ld A,(C)
 opcodes[ 0xF3 ] = 
 opcodes[ 0xF4 ] = unused
 opcodes[ 0xF5 ] = push(A,F); //push AF
-opcodes[ 0xF6 ] = 
+opcodes[ 0xF6 ] = or_from_mem(A,imm); //or #
 opcodes[ 0xF7 ] = 
 opcodes[ 0xF8 ] = ldhl(); //ldhl SP,n
 opcodes[ 0xF9 ] = ld16(HL,SP,HL); //ld SP,HL
@@ -626,5 +735,5 @@ opcodes[ 0xFA ] = ld_from_mem_imm(A); //ldd A,(nn)
 opcodes[ 0xFB ] = 
 opcodes[ 0xFC ] = unused
 opcodes[ 0xFD ] = unused
-opcodes[ 0xFE ] = 
+opcodes[ 0xFE ] = cp(A,imm); //cp #
 opcodes[ 0xFF ] = 
