@@ -94,7 +94,7 @@ function signed(a){
 
 //opcode functions
 function nop(){
-    cp += 1;
+    PC += 1;
     return 4;
 }
 
@@ -481,17 +481,52 @@ function inc(a,b){
     if(a == H && b == L){
         var n = read( (register[a]<<8) + register[b]);
         n += 1;
+        write((register[a]<<8) + register[b], n);
+        flags.H = (((n&0xF)+1)>=0x10) ? (true) : (false);
+        flags.Z = (register[a] == 0) ? (true) : (false);
+        flags.N = false;
         PC += 1;
         return 12;
     }else{
         register[a] += 1; 
-        //flags.H = (((register[A]&0xF0)-(n&0xF0))<0x10) ? (true) : (false);
+        flags.H = (((register[a]&0xF)+1)>=0x10) ? (true) : (false);
         flags.Z = (register[a] == 0) ? (true) : (false);
         flags.N = false;
         PC += 1
         return 4;
     }
-    
+}
+
+function dec(a,b){
+    if(a == H && b == L){
+        var n = read( (register[a]<<8) + register[b]);
+        n -= 1;
+        write((register[a]<<8) + register[b], n);
+        flags.H = (((n&0xF0)-1)<0x10) ? (true) : (false);
+        flags.Z = (register[a] == 0) ? (true) : (false);
+        flags.N = true;
+        PC += 1;
+        return 12;
+    }else{
+        register[a] -= 1; 
+        flags.H = (((register[a]&0xF0)-1)<0x10) ? (true) : (false);
+        flags.Z = (register[a] == 0) ? (true) : (false);
+        flags.N = true;
+        PC += 1
+        return 4;
+    }  
+}
+
+function add16(a,b,c){
+    if(c == imm){
+
+    }else{
+        var m = (register[H]<<8) + register[L];
+        var n = (register[a]<<8) + register[b]; 
+        m += n;
+        
+    }
+
 }
 
 
@@ -503,7 +538,7 @@ opcodes[ 0x01 ] = ld16(B,C,imm); //ld BC,nn
 opcodes[ 0x02 ] = ld_to_mem(B,C,A); //ld (BC),A
 opcodes[ 0x03 ] = 
 opcodes[ 0x04 ] = inc(B,B); //inc B
-opcodes[ 0x05 ] = 
+opcodes[ 0x05 ] = dec(B,B); //dec B
 opcodes[ 0x06 ] = ld_imm(B); //ld B,n
 opcodes[ 0x07 ] = 
 opcodes[ 0x08 ] = ld16(SP,SP,spimm); //ld (nn),SP
@@ -511,7 +546,7 @@ opcodes[ 0x09 ] =
 opcodes[ 0x0A ] = ld_from_mem(A,B,C); //ld A,(BC)
 opcodes[ 0x0B ] = 
 opcodes[ 0x0C ] = inc(C,C); //inc C 
-opcodes[ 0x0D ] = 
+opcodes[ 0x0D ] = dec(C,C); //dec C
 opcodes[ 0x0E ] = ld_imm(C); //ld C,n
 opcodes[ 0x0F ] = 
 opcodes[ 0x10 ] = 
@@ -519,7 +554,7 @@ opcodes[ 0x11 ] = ld16(D,E,imm); //ld DE,nn
 opcodes[ 0x12 ] = ld_to_mem(D,E,A); //ld (DE),A
 opcodes[ 0x13 ] = 
 opcodes[ 0x14 ] = inc(D,D); //inc D
-opcodes[ 0x15 ] = 
+opcodes[ 0x15 ] = dec(D,D); //dec D
 opcodes[ 0x16 ] = ld_imm(D); //ld D,n
 opcodes[ 0x17 ] = 
 opcodes[ 0x18 ] = 
@@ -527,7 +562,7 @@ opcodes[ 0x19 ] =
 opcodes[ 0x1A ] = ld_from_mem(A,D,E); //ld A,(DE)
 opcodes[ 0x1B ] = 
 opcodes[ 0x1C ] = inc(E,E); //inc E
-opcodes[ 0x1D ] = 
+opcodes[ 0x1D ] = dec(E,E); //dec E
 opcodes[ 0x1E ] = ld_imm(E); //ld E,n
 opcodes[ 0x1F ] = 
 opcodes[ 0x20 ] = 
@@ -535,7 +570,7 @@ opcodes[ 0x21 ] = ld16(H,L,imm); //ld HL,nn
 opcodes[ 0x22 ] = ldi(HL,A); //ld (HL+),A
 opcodes[ 0x23 ] = 
 opcodes[ 0x24 ] = inc(H,H); //inc H
-opcodes[ 0x25 ] = 
+opcodes[ 0x25 ] = dec(H,H); //dec H
 opcodes[ 0x26 ] = ld_imm(H); //ld H,n
 opcodes[ 0x27 ] = 
 opcodes[ 0x28 ] = 
@@ -543,15 +578,15 @@ opcodes[ 0x29 ] =
 opcodes[ 0x2A ] = ldi(A,HL); //ld A,(HL+)
 opcodes[ 0x2B ] = 
 opcodes[ 0x2C ] = inc(L,L); //inc L
-opcodes[ 0x2D ] = 
+opcodes[ 0x2D ] = dec(L,L); //dec L
 opcodes[ 0x2E ] = ld_imm(L); //ld L,n
 opcodes[ 0x2F ] = 
 opcodes[ 0x30 ] = 
 opcodes[ 0x31 ] = ld(SP,spimm,spimm); //ld SP,nn
 opcodes[ 0x32 ] = ldd(HL,A); //ld (HL-),A
 opcodes[ 0x33 ] = 
-opcodes[ 0x34 ] = 
-opcodes[ 0x35 ] = 
+opcodes[ 0x34 ] = inc(H,L) //inc (HL)
+opcodes[ 0x35 ] = dec(H,L); //dec (HL)
 opcodes[ 0x36 ] = ld_to_mem_imm(H,L); //ld (HL),n
 opcodes[ 0x37 ] = 
 opcodes[ 0x38 ] = 
@@ -559,7 +594,7 @@ opcodes[ 0x39 ] =
 opcodes[ 0x3A ] = ldd(A,HL); //ld A,(HL-)
 opcodes[ 0x3B ] = 
 opcodes[ 0x3C ] = inc(A,A); //inc A
-opcodes[ 0x3D ] = 
+opcodes[ 0x3D ] = dec(A,A); //dec A
 opcodes[ 0x3E ] = ld_imm(A); //ld A,#
 opcodes[ 0x3F ] = 
 opcodes[ 0x40 ] = ld(B,B); //ld B,B
