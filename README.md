@@ -9,4 +9,4 @@ JavaScript Gameboy emulator
 ## Not Working
 - PPU
 - Audio
-- loding Roms
+- loading Roms
