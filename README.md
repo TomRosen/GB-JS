@@ -1,13 +1,12 @@
 # GB-JS
 JavaScript Gameboy emulator
 
+## Working
+- ALU
+- OPCodes
+- Memory
 
-working:
-  -OPCodes
-  -ALU
-  -Memory
-  
-not Wwrking:
-  -PPU
-  -Audio
-  -loading Roms
+## Not Working
+- PPU
+- Audio
+- loding Roms
