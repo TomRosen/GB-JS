@@ -577,6 +577,29 @@ function dec16(a,b){
     }   
 }
 
+function swap(a){
+    if(a == HL){
+        var m = read((register[H]<<8) + register[L]);
+        n = m<<4 + m>>4;
+        write((register[H]<<8) + register[L],n)
+        flags.Z = (n == 0) ? (true) : (false);
+        flags.N = false;
+        flags.H = false;
+        flags.C = false;
+        PC += 1;
+        return 8;
+    }else{
+        var m = register[a]>>4;
+        register[a] = register<<4 + m;
+        flags.Z = (register[a] == 0) ? (true) : (false);
+        flags.N = false;
+        flags.H = false;
+        flags.C = false;
+        PC += 1;
+        return 8;
+    }
+}
+
 
 //opcode array
 opcodes = new Uint8Array(0x1000);
@@ -837,3 +860,14 @@ opcodes[ 0xFC ] = unused
 opcodes[ 0xFD ] = unused
 opcodes[ 0xFE ] = cp(A,imm); //cp #
 opcodes[ 0xFF ] = 
+
+cbcodes = new Uint8Array(0x1000)
+
+cbcodes[ 0x30 ] =
+cbcodes[ 0x31 ] =
+cbcodes[ 0x32 ] =
+cbcodes[ 0x33 ] =
+cbcodes[ 0x34 ] =
+cbcodes[ 0x35 ] =
+cbcodes[ 0x36 ] =
+cbcodes[ 0x37 ] =
