@@ -538,6 +538,7 @@ function add16(a,b,c){
     }else{
         var m = (register[H]<<8) + register[L];
         var n = (register[a]<<8) + register[b]; 
+<<<<<<< Updated upstream
         var mn = m + n
         register[H] = mn>>8;
         register[L] = mn;
@@ -546,6 +547,12 @@ function add16(a,b,c){
         flags.N = false;
         PC += 1;
         return 8;
+=======
+        m += n;
+        register[H] = m>>8;
+        register[L] = m&0xF;
+        
+>>>>>>> Stashed changes
     }
 }
 
