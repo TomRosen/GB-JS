@@ -40,14 +40,14 @@ const L = (1 << 7); //HL 2 Byte register used to store memory addresses
 var SP = 0xFFFE; //stack pointer
 var PC = 0x100; //programm counter
 
-var imm = 921;
+var imm = 921; //placeholder for immediate
 var spimm = 913;
 
 var flags = {
-    'Z': false,
-    'N': false,
-    'H': false,
-    'C': false,
+    'Z': false, //Zero flag
+    'N': false, //Subtract flag
+    'H': false, //Half Carry flag
+    'C': false, //Carry flag
     'flagByte': function(){
         var byte = 0;
         if(Z == true)
@@ -60,6 +60,53 @@ var flags = {
             byte += 1;
         return (byte << 4);
     }
+}
+
+var SpecialFlags = {
+    'P1' : 0xFF00, //Register for reading joy pad info and determining system type
+    'SB' : 0xFF01, //Serial transfer data
+    'SC' : 0xFF02, //SIO Control
+    'DIV' : 0xFF04, //Divider Register
+    'TIMA' : 0xFF05, //Timer counter
+    'TMA' : 0xFF06, //Timer Modulo
+    'TAC' : 0xFF07, //Time Control
+    'IF' : 0xFF0F, //Interrupt Flag
+    'NR10' : 0xFF10, //Sound Mode 1 register, Sweep register
+    'NR11' : 0xFF11, //Sound Mode 1 register, Sound length/Wave pattern duty
+    'NR12' : 0xFF12, //Sound Mode 1 register, envelope
+    'NR13' : 0xFF13, //Sound Mode 1 register, Frequency lo
+    'NR14' : 0xFF14, //Sound Mode 1 register, Frequency hi
+    'NR21' : 0xFF16, //Sound Mode 2 register, Sound Length; Wave Patter Duty
+    'NR22' : 0xFF17, //Sound Mode 2 register, envelope
+    'NR23' : 0xFF18, //Sound Mode 2 register, frequency low data
+    'NR24' : 0xFF19, //Sound Mode 2 register, frequency hi data
+    'NR30' : 0xFF1A, //Sound Mode 3 register, Sound on/off
+    'NR31' : 0xFF1B, //Sound Mode 3 register, sound length
+    'NR32' : 0xFF1C, //Sound Mode 3 register, Select output level
+    'NR33' : 0xFF1D, //Sound Mode 3 register, frequency's lower data
+    'NR34' : 0xFF1E, //Sound Mode 3 register, frequency's higher data
+    'NR41' : 0xFF20, //Sound Mode 4 register, sound length
+    'NR42' : 0xFF21, //Sound Mode 4 regsiter, envolope
+    'NR43' : 0xFF22, //Sound Mode 4 Register, polynomial counter
+    'NR44' : 0xFF23, //Sound Mode 4 Register counter/consecutive
+    'NR50' : 0xFF24, //Channel control / ON-OFF / Volume
+    'NR51' : 0xFF25, //Selection of Sound output terminal
+    'NR52' : 0xFF26, //Sound on/off
+    // 0xFF30-0xFF3F (Wave Pattern RAM)
+    'LCDC' : 0xFF40, //LCD Control
+    'STAT' : 0xFF41, //LCDC Status
+    'SCY' : 0xFF42, //Scroll Y
+    'SCX' : 0xFF43, //Scroll X
+    'LY' : 0xFF44, //LCDC Y-Coordinate
+    'LYC' : 0xFF45, //LY Compare
+    'DMA' : 0xFF46, //DMA Transfer and Start Adress
+    'BGP' : 0xFF47, //BG & Windows Palette Data
+    'OBP0' : 0xFF48, //Object Palette 0 Data
+    'OBP1' : 0xFF49, //Object Palette 1 Data
+    'WY' : 0xFF4A, //Window Y Position
+    'WX' : 0xFF4b, //Window X Position
+    'IE' : 0xFFFF, //Interrupt Enable
+
 }
 
 //Bus
@@ -216,7 +263,7 @@ function ld16(a,b,c){//ld 16-bit
             PC += 3;
             return 12; 
         }else{//ld (nn),SP
-            write( (read(PC+2)<<8) + read(PC+1), SP&0xFF, SP>>8);
+            write( (read(PC+2)<<8) + read(PC+1), SP&0xFF, SP>>>8);
             PC += 3;
             return 20;
         }   
@@ -528,7 +575,7 @@ function add16(a,b,c){
     }else if(a == SP){
         var m = (register[H]<<8) + register[L];; 
         var mn = m + SP
-        register[H] = mn>>8;
+        register[H] = mn>>>8;
         register[L] = mn;
         flags.H = (((m&0xFFF)+(SP&0xFFF))>=0x1000) ? (true) : (false);
         flags.C = (mn < m) ? (true) : (false);
@@ -538,21 +585,14 @@ function add16(a,b,c){
     }else{
         var m = (register[H]<<8) + register[L];
         var n = (register[a]<<8) + register[b]; 
-<<<<<<< Updated upstream
         var mn = m + n
-        register[H] = mn>>8;
+        register[H] = mn>>>8;
         register[L] = mn;
         flags.H = (((m&0xFFF)+(n&0xFFF))>=0x1000) ? (true) : (false);
         flags.C = (mn < m) ? (true) : (false);
         flags.N = false;
         PC += 1;
         return 8;
-=======
-        m += n;
-        register[H] = m>>8;
-        register[L] = m&0xF;
-        
->>>>>>> Stashed changes
     }
 }
 
@@ -563,7 +603,7 @@ function inc16(a,b){
         return 8;
     }else{
         var m = ((register[a]<<8) + register[b])+1;
-        register[a] = m>>8;
+        register[a] = m>>>8;
         register[b] = m;
         PC += 1;
         return 8;
@@ -577,7 +617,7 @@ function dec16(a,b){
         return 8;
     }else{
         var m = ((register[a]<<8) + register[b])-1;
-        register[a] = m>>8;
+        register[a] = m>>>8;
         register[b] = m;
         PC += 1;
         return 8;
@@ -585,18 +625,18 @@ function dec16(a,b){
 }
 
 function swap(a){
-    if(a == HL){
+    if(a == 321){
         var m = read((register[H]<<8) + register[L]);
-        n = m<<4 + m>>4;
+        n = m<<4 + m>>>4;
         write((register[H]<<8) + register[L],n)
         flags.Z = (n == 0) ? (true) : (false);
         flags.N = false;
         flags.H = false;
         flags.C = false;
         PC += 1;
-        return 8;
+        return 16;
     }else{
-        var m = register[a]>>4;
+        var m = register[a]>>>4;
         register[a] = register<<4 + m;
         flags.Z = (register[a] == 0) ? (true) : (false);
         flags.N = false;
@@ -607,18 +647,233 @@ function swap(a){
     }
 }
 
+function daa(){
+    //http://gbdev.gg8.se/wiki/articles/DAA
+    
+    if (flags.N) {
+      if (flags.C) register[A]-=0x60;
+      if (flags.H) register[A]-=0x06;
+    } else {
+      if (register[A]>0x99 || flags.C) {register[A]+=0x60; flags.C=true}
+      if ((register[A]&0x0f)>0x09 || flags.H) register[A]+=0x06;
+    }
+
+    flags.Z = register[A] == 0
+    flags.H = false
+
+    PC += 1;
+    return 4;
+}
+
+function cpl(){
+    register[A] = register[A] ^ 0xFF;
+
+    flags.N = true;
+    flags.H = true;
+
+    PC += 1;
+    return 4;
+}
+
+function ccf(){
+    flags.N = false;
+    flags.H = false;
+
+    flags.C = !flags.C;
+
+    PC += 1;
+    return 4;
+}
+
+function scf(){
+    flags.N = false;
+    flags.H = false;
+
+    flags.C = true;
+
+    PC += 1;
+    return 4;
+}
+
+function rl(a,c,rla){ //c = through Carry  |rla  = used RLA instead of RL A
+    if(c==true){
+        var n = (flags.flagByte()&&0x10 == 0x10) ? (0x1) : (0x0); //get C flag
+        flags.C = (register[a]&&0x80 == 0x80) ? (true) : (false); //move bit 7 to C flag
+        register[a] = register[a]<<1 + n;
+    } else{
+        if(register[a]&&0x80 == 0x80){
+            register[a] = register[a]<<1 + 0x1;
+            flags.C = true;
+        } else{
+            register[a] = register[a]<<1;
+            flags.C = false
+        }
+    }
+    flags.N = false;
+    flags.H = false;
+    flags.Z = (register[a]==0) ? (true) : (false);
+    PC += 1;
+    let r = (rla==true) ? (4) : (8);
+    return r;
+}
+
+function rl_from_mem(a,b,c){ //a,b mem location
+    var n = read( (register[a]<<8) + register[b]);
+    if(c==true){
+        var n = (flags.flagByte()&&0x10 == 0x10) ? (0x1) : (0x0); //get C flag
+        flags.C = (n&&0x80 == 0x80) ? (true) : (false); //move bit 7 to C flag
+        n = n<<1 + n;
+    } else{
+        if(n&&0x80 == 0x80){
+            n = n<<1 + 0x1;
+            flags.C = true;
+        } else{
+            n = n<<1;
+            flags.C = false
+        }
+    }
+    flags.N = false;
+    flags.H = false;
+    flags.Z = (n==0) ? (true) : (false);
+    write((register[a]<<8) + register[b],n);
+    PC += 1;
+    return 16;
+}
+
+function rr(a,c,rla){ //c = through Carry  |rla  = used RLA instead of RL A
+    if(c==true){
+        var n = (flags.flagByte()&&0x10 == 0x10) ? (0x80) : (0x0); //get C flag
+        flags.C = (register[a]&&0x1 == 0x1) ? (true) : (false); //move bit 0 to C flag
+        register[a] = register[a]>>>1 + n;
+    } else{
+        if(register[a]&&0x1 == 0x1){
+            register[a] = register[a]>>>1 + 0x80;
+            flags.C = true;
+        } else{
+            register[a] = register[a]>>>1;
+            flags.C = false
+        }
+    }
+    flags.N = false;
+    flags.H = false;
+    flags.Z = (register[a]==0) ? (true) : (false);
+    PC += 1;
+    let r = (rla==true) ? (4) : (8);
+    return r;
+}
+
+function rr_from_mem(a,b,c){ //a,b mem location
+    var n = read( (register[a]<<8) + register[b]);
+    if(c==true){
+        var m = (flags.flagByte()&&0x10 == 0x10) ? (0x80) : (0x0); //get C flag
+        flags.C = (n&&0x1 == 0x1) ? (true) : (false); //move bit 0 to C flag
+        n = n>>>1 + m;
+    } else{
+        if(n&&0x1 == 0x1){
+            n = n>>>1 + 0x80;
+            flags.C = true;
+        } else{
+            n = n>>>1;
+            flags.C = false
+        }
+    }
+    flags.N = false;
+    flags.H = false;
+    flags.Z = (n==0) ? (true) : (false);
+    write((register[a]<<8) + register[b],n);
+    PC += 1;
+    return 16;
+}
+
+function sl(a){
+    flags.C = (register[a]&&0x80 == 0x80) ? (true) : (false); //move bit 7 to C flag
+    register[a] = regsiter[a]<<1;
+    
+    flags.N = false;
+    flags.H = false;
+    flags.Z = (register[a]==0) ? (true) : (false);
+
+    PC += 1;
+    return 8;
+}
+
+function sl_from_mem(a,b){
+    var n = read( (register[a]<<8) + register[b]); 
+    flags.C = (n&&0x80 == 0x80) ? (true) : (false); //move bit 7 to C flag
+    n = n<<1;
+
+    flags.N = false;
+    flags.H = false;
+    flags.Z = (n==0) ? (true) : (false);
+    write((register[a]<<8) + register[b],n);
+    PC += 1;
+    return 16;
+}
+
+function sr(a,fbz){//fbz = first bit to zero
+    flags.C = (n&&0x1 == 0x1) ? (true) : (false); //move bit 0 to C flag
+    if(fbz == true)
+        register[a] = register[a]>>>1;
+    else
+        register[a] = register[a]>>1;
+
+    flags.N = false;
+    flags.H = false;
+    flags.Z = (register[a]==0) ? (true) : (false);
+    PC += 1;
+    return 8;
+}
+
+function sr_from_mem(a,b,fbz){
+    var n = read( (register[a]<<8) + register[b]); 
+    flags.C = (n&&0x1 == 0x1) ? (true) : (false); //move bit 0 to C flag
+    if(fbz == true)
+        n = n>>>1;
+    else
+        n = n>>1;
+
+    flags.N = false;
+    flags.H = false;
+    flags.Z = (n==0) ? (true) : (false);
+    write((register[a]<<8) + register[b],n);
+    PC += 1;
+    return 16;
+}
+
+function bit(bit,a){//bit to test
+    flags.Z = (register[a]&&0x1<<bit == 0x1<<bit) ? (false) : (true);
+
+    flags.N = false;
+    flags.H = true;
+
+    PC += 1;
+    return 8;
+}
+
+function bit_from_mem(bit,a,b){
+    var n = read( (register[a]<<8) + register[b]); 
+    flags.Z = (n&&0x1<<bit == 0x1<<bit) ? (false) : (true);
+
+    flags.N = false;
+    flags.H = true;
+    
+    PC += 1;
+    return 16;
+}
+
+
 
 //opcode array
 opcodes = new Uint8Array(0x1000);
 
-opcodes[ 0x00 ] = nop(4); //NOP
+opcodes[ 0x00 ] = nop(); //NOP
 opcodes[ 0x01 ] = ld16(B,C,imm); //ld BC,nn
 opcodes[ 0x02 ] = ld_to_mem(B,C,A); //ld (BC),A
 opcodes[ 0x03 ] = inc16(B,C); //inc BC
 opcodes[ 0x04 ] = inc(B,B); //inc B
 opcodes[ 0x05 ] = dec(B,B); //dec B
 opcodes[ 0x06 ] = ld_imm(B); //ld B,n
-opcodes[ 0x07 ] = 
+opcodes[ 0x07 ] = rl(A,false,true); //rlca
 opcodes[ 0x08 ] = ld16(SP,SP,spimm); //ld (nn),SP
 opcodes[ 0x09 ] = add16(B,C,HL); //add HL,BC
 opcodes[ 0x0A ] = ld_from_mem(A,B,C); //ld A,(BC)
@@ -626,7 +881,7 @@ opcodes[ 0x0B ] = dec16(B,C); //dec BC
 opcodes[ 0x0C ] = inc(C,C); //inc C 
 opcodes[ 0x0D ] = dec(C,C); //dec C
 opcodes[ 0x0E ] = ld_imm(C); //ld C,n
-opcodes[ 0x0F ] = 
+opcodes[ 0x0F ] = rr(A,false,true); // rrca
 opcodes[ 0x10 ] = 
 opcodes[ 0x11 ] = ld16(D,E,imm); //ld DE,nn
 opcodes[ 0x12 ] = ld_to_mem(D,E,A); //ld (DE),A
@@ -634,7 +889,7 @@ opcodes[ 0x13 ] = inc16(D,E); //inc DE
 opcodes[ 0x14 ] = inc(D,D); //inc D
 opcodes[ 0x15 ] = dec(D,D); //dec D
 opcodes[ 0x16 ] = ld_imm(D); //ld D,n
-opcodes[ 0x17 ] = 
+opcodes[ 0x17 ] = rl(A,true,true); //rla
 opcodes[ 0x18 ] = 
 opcodes[ 0x19 ] = add16(D,E,HL); //add HL,DE
 opcodes[ 0x1A ] = ld_from_mem(A,D,E); //ld A,(DE)
@@ -642,7 +897,7 @@ opcodes[ 0x1B ] = dec16(D,E); //dec DE
 opcodes[ 0x1C ] = inc(E,E); //inc E
 opcodes[ 0x1D ] = dec(E,E); //dec E
 opcodes[ 0x1E ] = ld_imm(E); //ld E,n
-opcodes[ 0x1F ] = 
+opcodes[ 0x1F ] = r(A,true,true); //rra
 opcodes[ 0x20 ] = 
 opcodes[ 0x21 ] = ld16(H,L,imm); //ld HL,nn
 opcodes[ 0x22 ] = ldi(HL,A); //ld (HL+),A
@@ -650,7 +905,7 @@ opcodes[ 0x23 ] = inc16(H,L); //inc HL
 opcodes[ 0x24 ] = inc(H,H); //inc H
 opcodes[ 0x25 ] = dec(H,H); //dec H
 opcodes[ 0x26 ] = ld_imm(H); //ld H,n
-opcodes[ 0x27 ] = 
+opcodes[ 0x27 ] = daa(); // daa
 opcodes[ 0x28 ] = 
 opcodes[ 0x29 ] = add16(H,L,HL); //add HL,HL
 opcodes[ 0x2A ] = ldi(A,HL); //ld A,(HL+)
@@ -658,7 +913,7 @@ opcodes[ 0x2B ] = dec16(H,L); //dec HL
 opcodes[ 0x2C ] = inc(L,L); //inc L
 opcodes[ 0x2D ] = dec(L,L); //dec L
 opcodes[ 0x2E ] = ld_imm(L); //ld L,n
-opcodes[ 0x2F ] = 
+opcodes[ 0x2F ] = cpl(); //cpl
 opcodes[ 0x30 ] = 
 opcodes[ 0x31 ] = ld(SP,spimm,spimm); //ld SP,nn
 opcodes[ 0x32 ] = ldd(HL,A); //ld (HL-),A
@@ -666,7 +921,7 @@ opcodes[ 0x33 ] = inc16(S,P); //inc SP
 opcodes[ 0x34 ] = inc(H,L) //inc (HL)
 opcodes[ 0x35 ] = dec(H,L); //dec (HL)
 opcodes[ 0x36 ] = ld_to_mem_imm(H,L); //ld (HL),n
-opcodes[ 0x37 ] = 
+opcodes[ 0x37 ] = scf(); //scf
 opcodes[ 0x38 ] = 
 opcodes[ 0x39 ] = add16(SP,SP,HL); //add SP,HL
 opcodes[ 0x3A ] = ldd(A,HL); //ld A,(HL-)
@@ -674,7 +929,7 @@ opcodes[ 0x3B ] = dec16(S,P); //dec SP
 opcodes[ 0x3C ] = inc(A,A); //inc A
 opcodes[ 0x3D ] = dec(A,A); //dec A
 opcodes[ 0x3E ] = ld_imm(A); //ld A,#
-opcodes[ 0x3F ] = 
+opcodes[ 0x3F ] = ccf(); //ccf
 opcodes[ 0x40 ] = ld(B,B); //ld B,B
 opcodes[ 0x41 ] = ld(B,C); //ld B,C
 opcodes[ 0x42 ] = ld(B,D); //ld B,D
@@ -868,13 +1123,268 @@ opcodes[ 0xFD ] = unused
 opcodes[ 0xFE ] = cp(A,imm); //cp #
 opcodes[ 0xFF ] = 
 
+/*
+    Todo:   halt() --> interrupt
+            stop() --> clock
+            di() --> interrupts 
+            ei() --> interrupts
+*/
+
 cbcodes = new Uint8Array(0x1000)
 
-cbcodes[ 0x30 ] =
-cbcodes[ 0x31 ] =
-cbcodes[ 0x32 ] =
-cbcodes[ 0x33 ] =
-cbcodes[ 0x34 ] =
-cbcodes[ 0x35 ] =
-cbcodes[ 0x36 ] =
-cbcodes[ 0x37 ] =
+cbcodes[ 0x00 ] = rl(B,false,false); //rlc B
+cbcodes[ 0x01 ] = rl(C,false,false); //rlc C
+cbcodes[ 0x02 ] = rl(D,false,false); //rlc D
+cbcodes[ 0x03 ] = rl(E,false,false); //rlc E
+cbcodes[ 0x04 ] = rl(H,false,false); //rlc H
+cbcodes[ 0x05 ] = rl(L,false,false); //rlc L
+cbcodes[ 0x06 ] = rl_from_mem(H,L,false); //rlc (HL)
+cbcodes[ 0x07 ] = rl(A,false,false); //rrc A
+cbcodes[ 0x08 ] = rr(B,false,false); //rrc B
+cbcodes[ 0x09 ] = rr(C,false,false); //rrc C
+cbcodes[ 0x0A ] = rr(D,false,false); //rrc D
+cbcodes[ 0x0B ] = rr(E,false,false); //rrc E
+cbcodes[ 0x0C ] = rr(H,false,false); //rrc H
+cbcodes[ 0x0D ] = rr(L,false,false); //rrc L
+cbcodes[ 0x0E ] = rr_from_mem(H,L,false); //rrc (HL)
+cbcodes[ 0x0F ] = rr(A,false,false); //rrc A
+cbcodes[ 0x10 ] = rl(B,true,false); //rl B
+cbcodes[ 0x11 ] = rl(C,true,false); //rl C
+cbcodes[ 0x12 ] = rl(D,true,false); //rl D
+cbcodes[ 0x13 ] = rl(E,true,false); //rl E
+cbcodes[ 0x14 ] = rl(H,true,false); //rl H
+cbcodes[ 0x15 ] = rl(L,true,false); //rl L
+cbcodes[ 0x16 ] = rl_from_mem(H,L,true); //rl (HL)
+cbcodes[ 0x17 ] = rl(A,true,false); //rr A
+cbcodes[ 0x18 ] = rr(B,true,false); //rr B
+cbcodes[ 0x19 ] = rr(C,true,false); //rr C
+cbcodes[ 0x1A ] = rr(D,true,false); //rr D
+cbcodes[ 0x1B ] = rr(E,true,false); //rr E
+cbcodes[ 0x1C ] = rr(H,true,false); //rr H
+cbcodes[ 0x1D ] = rr(L,true,false); //rr L
+cbcodes[ 0x1E ] = rr_from_mem(H,L,true); //rr (HL)
+cbcodes[ 0x1F ] = rr(A,true,false); //rr A
+cbcodes[ 0x20 ] = sl(B); //sla B
+cbcodes[ 0x21 ] = sl(C); //sla C
+cbcodes[ 0x22 ] = sl(D); //sla D
+cbcodes[ 0x23 ] = sl(E); //sla E
+cbcodes[ 0x24 ] = sl(H); //sla H
+cbcodes[ 0x25 ] = sl(L); //sla L
+cbcodes[ 0x26 ] = sl_from_mem(H,L); //sla (HL)
+cbcodes[ 0x27 ] = sl(A); //sla A
+cbcodes[ 0x28 ] = sr(B,false); //sra B
+cbcodes[ 0x29 ] = sr(C,false); //sra C
+cbcodes[ 0x2A ] = sr(D,false); //sra D
+cbcodes[ 0x2B ] = sr(E,false); //sra E
+cbcodes[ 0x2C ] = sr(H,false); //sra H
+cbcodes[ 0x2D ] = sr(L,false); //sra L
+cbcodes[ 0x2E ] = sr_from_mem(H,L,false); //sra (HL)
+cbcodes[ 0x2F ] = sr(A,false); //sra A
+cbcodes[ 0x30 ] = swap(B); //swap B
+cbcodes[ 0x31 ] = swap(C); //swap C
+cbcodes[ 0x32 ] = swap(D); //swap D
+cbcodes[ 0x33 ] = swap(E); //swap E
+cbcodes[ 0x34 ] = swap(H); //swap H
+cbcodes[ 0x35 ] = swap(L); //swap L
+cbcodes[ 0x36 ] = swap(321); //swap (HL)
+cbcodes[ 0x37 ] = swap(A); //swap A
+cbcodes[ 0x38 ] = sr(B,true); //srl B
+cbcodes[ 0x39 ] = sr(C,true); //srl C
+cbcodes[ 0x3A ] = sr(D,true); //srl D
+cbcodes[ 0x3B ] = sr(E,true); //srl E
+cbcodes[ 0x3C ] = sr(H,true); //srl H
+cbcodes[ 0x3D ] = sr(L,true); //srl L
+cbcodes[ 0x3E ] = sr_from_mem(H,L,true); //srl (HL)
+cbcodes[ 0x3F ] = sr(A,true); //srl A
+cbcodes[ 0x40 ] = 
+cbcodes[ 0x41 ] = 
+cbcodes[ 0x42 ] = 
+cbcodes[ 0x43 ] = 
+cbcodes[ 0x44 ] = 
+cbcodes[ 0x45 ] = 
+cbcodes[ 0x46 ] = 
+cbcodes[ 0x47 ] = 
+cbcodes[ 0x48 ] = 
+cbcodes[ 0x49 ] = 
+cbcodes[ 0x4A ] = 
+cbcodes[ 0x4B ] = 
+cbcodes[ 0x4C ] = 
+cbcodes[ 0x4D ] = 
+cbcodes[ 0x4E ] = 
+cbcodes[ 0x4F ] = 
+cbcodes[ 0x50 ] = 
+cbcodes[ 0x51 ] = 
+cbcodes[ 0x52 ] = 
+cbcodes[ 0x53 ] = 
+cbcodes[ 0x54 ] = 
+cbcodes[ 0x55 ] = 
+cbcodes[ 0x56 ] = 
+cbcodes[ 0x57 ] = 
+cbcodes[ 0x58 ] = 
+cbcodes[ 0x59 ] = 
+cbcodes[ 0x5A ] = 
+cbcodes[ 0x5B ] = 
+cbcodes[ 0x5C ] = 
+cbcodes[ 0x5D ] = 
+cbcodes[ 0x5E ] = 
+cbcodes[ 0x5F ] = 
+cbcodes[ 0x60 ] = 
+cbcodes[ 0x61 ] = 
+cbcodes[ 0x62 ] = 
+cbcodes[ 0x63 ] = 
+cbcodes[ 0x64 ] = 
+cbcodes[ 0x65 ] = 
+cbcodes[ 0x66 ] = 
+cbcodes[ 0x67 ] = 
+cbcodes[ 0x68 ] = 
+cbcodes[ 0x69 ] = 
+cbcodes[ 0x6A ] = 
+cbcodes[ 0x6B ] = 
+cbcodes[ 0x6C ] = 
+cbcodes[ 0x6D ] = 
+cbcodes[ 0x6E ] = 
+cbcodes[ 0x6F ] = 
+cbcodes[ 0x70 ] = 
+cbcodes[ 0x71 ] = 
+cbcodes[ 0x72 ] = 
+cbcodes[ 0x73 ] = 
+cbcodes[ 0x74 ] = 
+cbcodes[ 0x75 ] = 
+cbcodes[ 0x76 ] = 
+cbcodes[ 0x77 ] = 
+cbcodes[ 0x78 ] = 
+cbcodes[ 0x79 ] = 
+cbcodes[ 0x7A ] = 
+cbcodes[ 0x7B ] = 
+cbcodes[ 0x7C ] = 
+cbcodes[ 0x7D ] = 
+cbcodes[ 0x7E ] = 
+cbcodes[ 0x7F ] = 
+cbcodes[ 0x80 ] = 
+cbcodes[ 0x81 ] = 
+cbcodes[ 0x82 ] = 
+cbcodes[ 0x83 ] = 
+cbcodes[ 0x84 ] = 
+cbcodes[ 0x85 ] = 
+cbcodes[ 0x86 ] = 
+cbcodes[ 0x87 ] = 
+cbcodes[ 0x88 ] = 
+cbcodes[ 0x89 ] = 
+cbcodes[ 0x8A ] = 
+cbcodes[ 0x8B ] = 
+cbcodes[ 0x8C ] = 
+cbcodes[ 0x8D ] = 
+cbcodes[ 0x8E ] = 
+cbcodes[ 0x8F ] = 
+cbcodes[ 0x90 ] = 
+cbcodes[ 0x91 ] = 
+cbcodes[ 0x92 ] = 
+cbcodes[ 0x93 ] = 
+cbcodes[ 0x94 ] = 
+cbcodes[ 0x95 ] = 
+cbcodes[ 0x96 ] = 
+cbcodes[ 0x97 ] = 
+cbcodes[ 0x98 ] = 
+cbcodes[ 0x99 ] = 
+cbcodes[ 0x9A ] = 
+cbcodes[ 0x9B ] = 
+cbcodes[ 0x9C ] = 
+cbcodes[ 0x9D ] = 
+cbcodes[ 0x9E ] = 
+cbcodes[ 0x9F ] = 
+cbcodes[ 0xA0 ] = 
+cbcodes[ 0xA1 ] = 
+cbcodes[ 0xA2 ] = 
+cbcodes[ 0xA3 ] = 
+cbcodes[ 0xA4 ] = 
+cbcodes[ 0xA5 ] = 
+cbcodes[ 0xA6 ] = 
+cbcodes[ 0xA7 ] = 
+cbcodes[ 0xA8 ] = 
+cbcodes[ 0xA9 ] = 
+cbcodes[ 0xAA ] = 
+cbcodes[ 0xAB ] = 
+cbcodes[ 0xAC ] = 
+cbcodes[ 0xAD ] = 
+cbcodes[ 0xAE ] = 
+cbcodes[ 0xAF ] = 
+cbcodes[ 0xB0 ] = 
+cbcodes[ 0xB1 ] = 
+cbcodes[ 0xB2 ] = 
+cbcodes[ 0xB3 ] = 
+cbcodes[ 0xB4 ] = 
+cbcodes[ 0xB5 ] = 
+cbcodes[ 0xB6 ] = 
+cbcodes[ 0xB7 ] = 
+cbcodes[ 0xB8 ] = 
+cbcodes[ 0xB9 ] = 
+cbcodes[ 0xBA ] = 
+cbcodes[ 0xBB ] = 
+cbcodes[ 0xBC ] = 
+cbcodes[ 0xBD ] = 
+cbcodes[ 0xBE ] = 
+cbcodes[ 0xBF ] = 
+cbcodes[ 0xC0 ] = 
+cbcodes[ 0xC1 ] = 
+cbcodes[ 0xC2 ] = 
+cbcodes[ 0xC3 ] = 
+cbcodes[ 0xC4 ] = 
+cbcodes[ 0xC5 ] = 
+cbcodes[ 0xC6 ] = 
+cbcodes[ 0xC7 ] = 
+cbcodes[ 0xC8 ] = 
+cbcodes[ 0xC9 ] = 
+cbcodes[ 0xCA ] = 
+cbcodes[ 0xCB ] = 
+cbcodes[ 0xCC ] = 
+cbcodes[ 0xCD ] = 
+cbcodes[ 0xCE ] = 
+cbcodes[ 0xCF ] = 
+cbcodes[ 0xD0 ] = 
+cbcodes[ 0xD1 ] = 
+cbcodes[ 0xD2 ] = 
+cbcodes[ 0xD3 ] = 
+cbcodes[ 0xD4 ] = 
+cbcodes[ 0xD5 ] = 
+cbcodes[ 0xD6 ] = 
+cbcodes[ 0xD7 ] = 
+cbcodes[ 0xD8 ] = 
+cbcodes[ 0xD9 ] = 
+cbcodes[ 0xDA ] = 
+cbcodes[ 0xDB ] = 
+cbcodes[ 0xDC ] = 
+cbcodes[ 0xDD ] = 
+cbcodes[ 0xDE ] = 
+cbcodes[ 0xDF ] = 
+cbcodes[ 0xE0 ] = 
+cbcodes[ 0xE1 ] = 
+cbcodes[ 0xE2 ] = 
+cbcodes[ 0xE3 ] = 
+cbcodes[ 0xE4 ] = 
+cbcodes[ 0xE5 ] = 
+cbcodes[ 0xE6 ] = 
+cbcodes[ 0xE7 ] = 
+cbcodes[ 0xE8 ] = 
+cbcodes[ 0xE9 ] = 
+cbcodes[ 0xEA ] = 
+cbcodes[ 0xEB ] = 
+cbcodes[ 0xEC ] = 
+cbcodes[ 0xED ] = 
+cbcodes[ 0xEE ] = 
+cbcodes[ 0xEF ] = 
+cbcodes[ 0xF0 ] = 
+cbcodes[ 0xF1 ] = 
+cbcodes[ 0xF2 ] = 
+cbcodes[ 0xF3 ] = 
+cbcodes[ 0xF4 ] = 
+cbcodes[ 0xF5 ] = 
+cbcodes[ 0xF6 ] = 
+cbcodes[ 0xF7 ] = 
+cbcodes[ 0xF8 ] = 
+cbcodes[ 0xF9 ] = 
+cbcodes[ 0xFA ] = 
+cbcodes[ 0xFB ] = 
+cbcodes[ 0xFC ] = 
+cbcodes[ 0xFD ] = 
+cbcodes[ 0xFE ] = 
+cbcodes[ 0xFF ] = 
