@@ -62,7 +62,7 @@ var flags = {
     }
 }
 
-var SpecialFlags = {
+var SpecialFlags = { // http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf#page=35
     'P1' : 0xFF00, //Register for reading joy pad info and determining system type
     'SB' : 0xFF01, //Serial transfer data
     'SC' : 0xFF02, //SIO Control
@@ -93,7 +93,7 @@ var SpecialFlags = {
     'NR51' : 0xFF25, //Selection of Sound output terminal
     'NR52' : 0xFF26, //Sound on/off
     // 0xFF30-0xFF3F (Wave Pattern RAM)
-    'LCDC' : 0xFF40, //LCD Control
+    'LCDC' : 0xFF40, //LCD Control | Background & Window controll http://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf#page=23
     'STAT' : 0xFF41, //LCDC Status
     'SCY' : 0xFF42, //Scroll Y
     'SCX' : 0xFF43, //Scroll X
@@ -145,7 +145,7 @@ function nop(){
     return 4;
 }
 
-function ld(a,b){
+function ld(a,b){ // load from register b to register a
     register[a] = register[b];
     PC += 1;
     return 4;
@@ -163,7 +163,7 @@ function ld_from_mem(a,b,c){ //loads from defined memory location
     return 8;
 }
 
-function ld_from_mem_imm(a){ //loads from memory location, pointed to by next to bytes
+function ld_from_mem_imm(a){ //loads from memory location, pointed to by next two bytes
     register[a] = read( (read(PC+2)<<8) + read(PC+1));
     PC += 3;
     return 16;
@@ -499,7 +499,7 @@ function xor_from_mem(a,b){
 function cp(a){ //add register n to register A
     register[A] -= register[a];
     flags.H = (((register[A]&0xF0)-(register[a]&0xF0))<0x10) ? (true) : (false);
-    flags.C = (register[A] < register[a]) ? (true) : (false);
+    flags.C = (register[A] < register[a]) ? (true) : (false); //might also need to check for carry
     flags.Z = (register[A] == register[a]) ? (true) : (false);
     flags.N = true;
     PC += 1;
@@ -625,7 +625,7 @@ function dec16(a,b){
 }
 
 function swap(a){
-    if(a == 321){
+    if(a == 321){ //swap at location (HL)
         var m = read((register[H]<<8) + register[L]);
         n = m<<4 + m>>>4;
         write((register[H]<<8) + register[L],n)
@@ -647,7 +647,7 @@ function swap(a){
     }
 }
 
-function daa(){
+function daa(){ //Decimal adjust register A to BCD
     //http://gbdev.gg8.se/wiki/articles/DAA
     
     if (flags.N) {
@@ -665,7 +665,7 @@ function daa(){
     return 4;
 }
 
-function cpl(){
+function cpl(){ //Complement register A
     register[A] = register[A] ^ 0xFF;
 
     flags.N = true;
@@ -675,7 +675,7 @@ function cpl(){
     return 4;
 }
 
-function ccf(){
+function ccf(){ //Complement C Flag
     flags.N = false;
     flags.H = false;
 
@@ -685,7 +685,7 @@ function ccf(){
     return 4;
 }
 
-function scf(){
+function scf(){ //Set C Flag
     flags.N = false;
     flags.H = false;
 
@@ -882,7 +882,7 @@ opcodes[ 0x0C ] = inc(C,C); //inc C
 opcodes[ 0x0D ] = dec(C,C); //dec C
 opcodes[ 0x0E ] = ld_imm(C); //ld C,n
 opcodes[ 0x0F ] = rr(A,false,true); // rrca
-opcodes[ 0x10 ] = 
+opcodes[ 0x10 ] = 0; //https://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf#page=97
 opcodes[ 0x11 ] = ld16(D,E,imm); //ld DE,nn
 opcodes[ 0x12 ] = ld_to_mem(D,E,A); //ld (DE),A
 opcodes[ 0x13 ] = inc16(D,E); //inc DE
@@ -984,7 +984,7 @@ opcodes[ 0x72 ] = ld_to_mem(H,L,D); //ld (HL),D
 opcodes[ 0x73 ] = ld_to_mem(H,L,E); //ld (HL),E
 opcodes[ 0x74 ] = ld_to_mem(H,L,H); //ld (HL),H
 opcodes[ 0x75 ] = ld_to_mem(H,L,L); //ld (HL),L
-opcodes[ 0x76 ] = 
+opcodes[ 0x76 ] = 0;//https://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf#page=97
 opcodes[ 0x77 ] = ld_to_mem(H,L,A); //ld (HL),A 
 opcodes[ 0x78 ] = ld(A,B); //ld A,B
 opcodes[ 0x79 ] = ld(A,C); //ld A,C
@@ -1092,7 +1092,7 @@ opcodes[ 0xDE ] =
 opcodes[ 0xDF ] = 
 opcodes[ 0xE0 ] = ldh(imm,A); //ld ($FF00+n),A
 opcodes[ 0xE1 ] = pop(H,L); //pop HL
-opcodes[ 0xE2 ] = ld(C,A); //ld (C),A
+opcodes[ 0xE2 ] = ldac(C,A); //ld ($FF00+C),A
 opcodes[ 0xE3 ] = unused
 opcodes[ 0xE4 ] = unused
 opcodes[ 0xE5 ] = push(H,L); //push HL
@@ -1108,8 +1108,8 @@ opcodes[ 0xEE ] = xor(A,imm); //xor #
 opcodes[ 0xEF ] = 
 opcodes[ 0xF0 ] = ldh(A,imm); //ld A,($FF00+n)
 opcodes[ 0xF1 ] = pop(A,F); //pop AF
-opcodes[ 0xF2 ] = ld(A,C); //ld A,(C)
-opcodes[ 0xF3 ] = 
+opcodes[ 0xF2 ] = ldac(A,C); //ld A,($FF00+C)
+opcodes[ 0xF3 ] = 0; //https://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf#page=98
 opcodes[ 0xF4 ] = unused
 opcodes[ 0xF5 ] = push(A,F); //push AF
 opcodes[ 0xF6 ] = or_from_mem(A,imm); //or #
@@ -1117,7 +1117,7 @@ opcodes[ 0xF7 ] =
 opcodes[ 0xF8 ] = ldhl(); //ldhl SP,n
 opcodes[ 0xF9 ] = ld16(HL,SP,HL); //ld SP,HL
 opcodes[ 0xFA ] = ld_from_mem_imm(A); //ldd A,(nn)
-opcodes[ 0xFB ] = 
+opcodes[ 0xFB ] = 0; //https://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf#page=98
 opcodes[ 0xFC ] = unused
 opcodes[ 0xFD ] = unused
 opcodes[ 0xFE ] = cp(A,imm); //cp #
@@ -1196,14 +1196,14 @@ cbcodes[ 0x3C ] = sr(H,true); //srl H
 cbcodes[ 0x3D ] = sr(L,true); //srl L
 cbcodes[ 0x3E ] = sr_from_mem(H,L,true); //srl (HL)
 cbcodes[ 0x3F ] = sr(A,true); //srl A
-cbcodes[ 0x40 ] = 
-cbcodes[ 0x41 ] = 
-cbcodes[ 0x42 ] = 
-cbcodes[ 0x43 ] = 
-cbcodes[ 0x44 ] = 
-cbcodes[ 0x45 ] = 
-cbcodes[ 0x46 ] = 
-cbcodes[ 0x47 ] = 
+cbcodes[ 0x40 ] = (bit) => bit(bit,B); //BIT b,B
+cbcodes[ 0x41 ] = (bit) => bit(bit,C); //BIT b,C
+cbcodes[ 0x42 ] = (bit) => bit(bit,D); //BIT b,D
+cbcodes[ 0x43 ] = (bit) => bit(bit,E); //BIT b,E
+cbcodes[ 0x44 ] = (bit) => bit(bit,H); //BIT b,H
+cbcodes[ 0x45 ] = (bit) => bit(bit,L); //BIT b,L
+cbcodes[ 0x46 ] = (bit) => bit_from_mem(bit,H,L);; //BIT b,(HL)
+cbcodes[ 0x47 ] = (bit) => bit(bit,A); //BIT b,A
 cbcodes[ 0x48 ] = 
 cbcodes[ 0x49 ] = 
 cbcodes[ 0x4A ] = 
