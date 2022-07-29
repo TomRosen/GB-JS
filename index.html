@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html>
-    <header>
-
-    </header>
-    <body>
-        <script src="test.js"></script>
-    </body>
+	<header>
+		<script defer src="gb.js"></script>
+	</header>
+	<body>
+		<input type="file" accept=".gb" onchange="openFile(event)" />
+        <canvas id="screen" width="160" height="144" style="border: 1px solid black;"></canvas>
+	</body>
 </html>
