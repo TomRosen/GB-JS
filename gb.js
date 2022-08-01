@@ -42,18 +42,25 @@ var ROMBankOffset = () => {
 	return 0x4000 * (currentROMBank - 1);
 };
 
+var bootCode =
+	'31 FE FF AF 21 FF 9F 32 CB 7C 20 FB 21 26 FF 0E 11 3E 80 32 E2 0C 3E F3 E2 32 3E 77 77 3E FC E0 47 11 A8 00 21 10 80 1A CD 95 00 CD 96 00 13 7B FE 34 20 F3 11 D8 00 06 08 1A 13 22 23 05 20 F9 3E 19 EA 10 99 21 2F 99 0E 0C 3D 28 08 32 0D 20 F9 2E 0F 18 F3 67 3E 64 57 E0 42 3E 91 E0 40 04 1E 02 0E 0C F0 44 FE 90 20 FA 0D 20 F7 1D 20 F2 0E 13 24 7C 1E 83 FE 62 28 06 1E C1 FE 64 20 06 7B E2 0C 3E 87 E2 F0 42 90 E0 42 15 20 D2 05 20 4F 16 20 18 CB 4F 06 04 C5 CB 11 17 C1 CB 11 17 05 20 F5 22 23 22 23 C9 00 00 00 0D 00 09 11 09 89 39 08 C9 00 0B 00 03 00 0C CC CC 00 0F 00 00 00 00 EC CC EC CC DD DD 99 99 98 89 EE FB 67 63 6E 0E CC DD 1F 9F 88 88 00 00 00 00 00 00 00 00 21 A8 00 11 A8 00 1A 13 BE 20 FE 23 7D FE 34 20 F5 06 19 78 86 23 05 20 FB 86 20 FE 3E 01 E0 50'
+		.split(' ')
+		.map((x) => parseInt(x, 16));
+
 //cpu reg addresses
-const A = 1 << 0; //Accumulator register
-const F = 1 << 1; //Accumulator flag
-const B = 1 << 2; //BC 2 Byte register
-const C = 1 << 3; //BC 2 Byte register
-const D = 1 << 4; //DE 2 Byte register
-const E = 1 << 5; //DE 2 Byte register
-const H = 1 << 6; //HL 2 Byte register used to store memory addresses
-const L = 1 << 7; //HL 2 Byte register used to store memory addresses
+const A = 7; //Accumulator register
+const F = 6; //Accumulator flag
+const B = 0; //BC 2 Byte register
+const C = 1; //BC 2 Byte register
+const D = 2; //DE 2 Byte register
+const E = 3; //DE 2 Byte register
+const H = 4; //HL 2 Byte register used to store memory addresses
+const L = 5; //HL 2 Byte register used to store memory addresses
 
 var SP = 0xfffe; //stack pointer
-var PC = 0x100; //programm counter
+var PC = 0; //0x100; //programm counter
+
+var IME = false; //Interupt Master enable
 
 var imm = 921; //placeholder for immediate
 var spimm = 913;
@@ -65,10 +72,10 @@ var flags = {
 	C: false, //Carry flag
 	flagByte: function () {
 		var byte = 0;
-		if (Z == true) byte += 8;
-		if (N == true) byte += 4;
-		if (H == true) byte += 2;
-		if (C == true) byte += 1;
+		if (this.Z == true) byte += 8;
+		if (this.N == true) byte += 4;
+		if (this.H == true) byte += 2;
+		if (this.C == true) byte += 1;
 		return byte << 4;
 	},
 };
@@ -134,12 +141,12 @@ function memorybankControll(addr, data) {
 				RAMEnabled = (data & 0xf) == 0xa;
 			} else if (addr <= 0x3fff) {
 				//switch ROM bank
-				currentROMBank = (data&0x1f) == 0 ? 1 : data&0x1f;
+				currentROMBank = (data & 0x1f) == 0 ? 1 : data & 0x1f;
 			} else if (addr <= 0x5fff) {
 				//switch RAM bank
-				if(MBCMode == 0){
+				if (MBCMode == 0) {
 					//stolen from https://github.com/mitxela/swotGB/blob/master/gbjs.htm line 976
-					currentROMBank = (currentROMBank&0x1F)|(data<<5);
+					currentROMBank = (currentROMBank & 0x1f) | (data << 5);
 				} else {
 					currentRAMBank = data & 0x3;
 				}
@@ -151,11 +158,13 @@ function memorybankControll(addr, data) {
 		case 0x05: //ROM+MBC2
 		case 0x06: //ROM+MBC2+BATT Has upto 256k RAM without switching ?????
 			if (addr <= 0x1fff) {
-				if(addr&0x100 == 0) //lsb of upper byte must be 0
+				if (addr & (0x100 == 0))
+					//lsb of upper byte must be 0
 					RAMEnabled = (data & 0xf) == 0xa;
 			} else if (addr <= 0x3fff) {
-				if(addr&0x100 == 0x100) //lsb of upper byte must be 1
-					currentROMBank = (data&0x1f) == 0 ? 1 : data&0x1f;	
+				if (addr & (0x100 == 0x100))
+					//lsb of upper byte must be 1
+					currentROMBank = (data & 0x1f) == 0 ? 1 : data & 0x1f;
 			}
 			break;
 		case 0x08: //ROM+RAM
@@ -165,46 +174,47 @@ function memorybankControll(addr, data) {
 		case 0x0b: //ROM+MMM01
 		case 0x0c: //ROM+MMM01+SRAM
 		case 0x0d: //ROM+MMM01+SRAM+BATT
-			console.log("No");
+			console.log('No');
 			break;
 		case 0x0f: //ROM+MBC3+TIMER+BATT
 		case 0x10: //ROM+MBC3+TIMER+RAM+BATT
 		case 0x11: //ROM+MBC3
 		case 0x12: //ROM+MBC3+RAM
 		case 0x13: //ROM+MBC3+RAM+BATT
-			if (addr <= 0x1FFF) { //also timer enable
-      			RAMEnabled = (data & 0xf) == 0xa;
-    		} else if (addr <= 0x3FFF){
-				currentROMBank = (data&0x7f) == 0 ? 1 : data&0x7f;
-    		} else if (addr<=0x5fff) {
-      			if (data < 8) {
-        			currentRAMBank=data;
-      			} else{ 
-       			 //0x08-0x0C map RTC register to RAM space
-      			}
-    		} else {
-      			// 6000-7FFF - Latch Clock Data
+			if (addr <= 0x1fff) {
+				//also timer enable
+				RAMEnabled = (data & 0xf) == 0xa;
+			} else if (addr <= 0x3fff) {
+				currentROMBank = (data & 0x7f) == 0 ? 1 : data & 0x7f;
+			} else if (addr <= 0x5fff) {
+				if (data < 8) {
+					currentRAMBank = data;
+				} else {
+					//0x08-0x0C map RTC register to RAM space
+				}
+			} else {
+				// 6000-7FFF - Latch Clock Data
 				// https://gbdev.gg8.se/wiki/articles/Memory_Bank_Controllers#MBC3_.28max_2MByte_ROM_and.2For_64KByte_RAM_and_Timer.29
-    		}
+			}
 			break;
 		case 0x19: //ROM+MBC5
 		case 0x1a: //ROM+MBC5+RAM
 		case 0x1b: //ROM+MBC5+RAM+BATT
-			if (addr <= 0x1FFF) {
-      			RAMEnabled = ((data & 0x0F) == 0xA) 
-   			} else if(addr <= 0x2FFF){
-				currentROMBank = data&0xFF;
-			} else if (addr <= 0x3FFF){
-      			currentROMBank &= 0xFF;
-      			if (data&1) ROMbank+=0x100;
-    		} else if (addr<=0x5fff) {
-      			currentRAMBank=data&0x0F;
-    		}
+			if (addr <= 0x1fff) {
+				RAMEnabled = (data & 0x0f) == 0xa;
+			} else if (addr <= 0x2fff) {
+				currentROMBank = data & 0xff;
+			} else if (addr <= 0x3fff) {
+				currentROMBank &= 0xff;
+				if (data & 1) ROMbank += 0x100;
+			} else if (addr <= 0x5fff) {
+				currentRAMBank = data & 0x0f;
+			}
 			break;
 		case 0x1c: //ROM+MBC5+RUMBLE
 		case 0x1d: //ROM+MBC5+RUMBLE+SRAM
 		case 0x1e: //ROM+MBC5+RUMBLE+SRAM+BATT
-			console.log("Rumble Cards not handled yet");
+			console.log('Rumble Cards not handled yet');
 			break;
 		case 0x1f: //POCKET CAMERA
 		case 0xfd: //BANDAI TAMA5
@@ -240,11 +250,12 @@ function write16bit(addr, data1, data2) {
 
 function read(addr) {
 	//return data from memory
-	if(addr < 0x4000) return rom[addr];
-	if(addr < 0x8000) return rom[addr + ROMBankOffset()];
+	if (addr < 0x100) return bootCode[addr];
+	if (addr < 0x4000) return rom[addr];
+	if (addr < 0x8000) return rom[addr + ROMBankOffset()];
 	if (addr >= 0xa000 && addr < 0xc000)
 		return cartridgeRAM[addr + RAMBankOffset()];
-	
+
 	if (addr >= 0x0000 && addr <= 0xffff) {
 		return memory[addr];
 	}
@@ -348,7 +359,7 @@ function ldac(a, b) {
 function ldd(a, b) {
 	//ld decrease
 	return () => {
-		if (a == HL) {
+		if (a == 321) {
 			//write to (HL)
 			write(register[L] + (register[H] << 8), register[b]);
 			if (register[L] == 0) register[H] -= 1;
@@ -419,8 +430,13 @@ function ld16(a, b, c) {
 				PC += 3;
 				return 12;
 			} else {
+				//////////////////////////check again, not sure if it is write16bit or write16
 				//ld (nn),SP
-				write((read(PC + 2) << 8) + read(PC + 1), SP & 0xff, SP >>> 8);
+				write16bit(
+					(read(PC + 2) << 8) + read(PC + 1),
+					SP >>> 8,
+					SP & 0xff /*  SP & 0xff, SP >>> 8 */
+				);
 				PC += 3;
 				return 20;
 			}
@@ -1186,7 +1202,7 @@ function jump_from_mem_imm(con) {
 function jump_hl() {
 	// Jump to address in HL
 	return () => {
-		PC = (register[a] << 8) + register[b];
+		PC = (register[H] << 8) + register[L];
 
 		return 4;
 	};
@@ -1210,8 +1226,8 @@ function call(con) {
 	return () => {
 		if (con || con == null) {
 			SP -= 2;
-			writeMem16(SP, (PC + 3) >> 8, (PC + 3) & 0xff); // maybe write upper lower nibble as one byte?
-			PC = (read(PC + 2) << 8) + read(PC + 1);
+			write16bit(SP, (PC + 3) >> 8, (PC + 3) & 0xff); // maybe write upper lower nibble as one byte?
+			PC = read(PC + 1) + (read(PC + 2) << 8);
 		} else {
 			PC += 3;
 		}
@@ -1224,22 +1240,44 @@ function rst(start) {
 	//Push current addr to stack and jump to start
 	return () => {
 		SP -= 2;
-		writeMem16(SP, (PC + 1) >> 8, (PC + 1) & 0xff); // maybe write upper lower nibble as one byte?
+		write16bit(SP, (PC + 1) >> 8, (PC + 1) & 0xff); // maybe write upper lower nibble as one byte?
 		PC = start;
 		return 32;
 	};
 }
 
-function ret(con) {
+function ret(con, reti = false) {
 	//Pop two bytes from stack & jump to that address
 	return () => {
+		if (reti) IME = true;
 		if (con || con == null) {
-			let a = readMem16(SP);
-			SP += 2;
-			PC = (a[0] << 8) + a[1];
+			let a = read(SP);
+			SP += 1;
+			let b = read(SP);
+			SP += 1;
+			PC = (a << 8) + b;
 		}
 
 		return 8;
+	};
+}
+
+function di() {
+	return () => {
+		IME = false;
+
+		PC += 1;
+		return 4;
+	};
+}
+
+function ei() {
+	//but wait until next instruction
+	return () => {
+		IME = true;
+
+		PC += 1;
+		return 4;
 	};
 }
 
@@ -1454,7 +1492,7 @@ opcodes[0xc8] = ret(flags.Z); //ret Z
 opcodes[0xc9] = ret(null); //ret
 opcodes[0xca] = jump_from_mem_imm(flags.Z); // jp Z,nn
 opcodes[0xcb] = function () {
-	return CBcodes[readMem(++PC)]();
+	return cbcodes[read(++PC)]();
 }; //prefix cb
 opcodes[0xcc] = call(flags.Z); // call Z,nn
 opcodes[0xcd] = call(null); // call nn
@@ -1469,7 +1507,7 @@ opcodes[0xd5] = push(D, E); //push DE
 opcodes[0xd6] = sub_from_mem(A, imm); //sub #
 opcodes[0xd7] = rst(0x10); //rest 10H
 opcodes[0xd8] = ret(flags.C); //ret C
-opcodes[0xd9] = 0; //#page=118
+opcodes[0xd9] = ret(null, true); //reti
 opcodes[0xda] = jump_from_mem_imm(flags.C); // jp C,nn
 opcodes[0xdb] = unused;
 opcodes[0xdc] = call(flags.C); // call C,nn
@@ -1495,7 +1533,7 @@ opcodes[0xef] = rst(0x28); //rst 28H
 opcodes[0xf0] = ldh(A, imm); //ld A,($FF00+n)
 opcodes[0xf1] = pop(A, F); //pop AF
 opcodes[0xf2] = ldac(A, C); //ld A,($FF00+C)
-opcodes[0xf3] = 0; //https://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf#page=98
+opcodes[0xf3] = di(); //di
 opcodes[0xf4] = unused;
 opcodes[0xf5] = push(A, F); //push AF
 opcodes[0xf6] = or_from_mem(A, imm); //or #
@@ -1503,7 +1541,7 @@ opcodes[0xf7] = rst(0x30); //rst 30H
 opcodes[0xf8] = ldhl(); //ldhl SP,n
 opcodes[0xf9] = ld16(null, SP, null); //ld SP,HL
 opcodes[0xfa] = ld_from_mem_imm(A); //ldd A,(nn)
-opcodes[0xfb] = 0; //https://marc.rawer.de/Gameboy/Docs/GBCPUman.pdf#page=98
+opcodes[0xfb] = ei(); //ei
 opcodes[0xfc] = unused;
 opcodes[0xfd] = unused;
 opcodes[0xfe] = cp(A, imm); //cp #
@@ -1615,12 +1653,31 @@ for (let i = 0; i < 2; i++) {
 	}
 }
 
+var running = false;
 function cpu() {
-	let running = false;
+	initialize();
+	running = true;
 	let cycles = 0;
-	if (running) {
-		cycles = cbcodes[read(PC)]();
+	for (let i = 0; i < 10000; i++) {
+		if (running) {
+			console.log('PC: ', PC.toString(16));
+			console.log('Executing: ', read(PC).toString(16));
+			cycles = opcodes[read(PC)]();
+			console.log('-------------------------------------');
+		}
 	}
+}
+
+function initialize() {
+	register[A] = 0x01;
+	register[F] = 0xb0;
+	register[B] = 0x00;
+	register[C] = 0x13;
+	register[D] = 0x00;
+	register[E] = 0xd8;
+	register[H] = 0x01;
+	register[L] = 0x4d;
+	SP = 0xfffe;
 }
 
 var openFile = function (event) {
@@ -1630,16 +1687,14 @@ var openFile = function (event) {
 	reader.onloadend = function (evt) {
 		if (evt.target.readyState === FileReader.DONE) {
 			rom = new Uint8Array(reader.result);
-			for (var i = 0; i < rom.length; i++) {}
-			for (let j = 260; j<= 307; j++ ){
+			// for (let i = 0; i < 256; i++) rom[i] = bootCode[i];
+			for (let j = 260; j <= 307; j++) {
 				console.log(rom[j].toString(16));
-				
 			}
 
-			currentROMBank = 0;
-			currentRAMBank, MBCMode = 0;
+			currentROMBank, currentRAMBank, MBCMode = 0;
 			RAMEnabled = false;
-			
+			cpu();
 		}
 	};
 	reader.readAsArrayBuffer(input.files[0]);
@@ -1647,5 +1702,6 @@ var openFile = function (event) {
 
 var canvasCtx = document.getElementById('screen').getContext('2D');
 
-var cImgData = canvasCtx.getImageData(0,0,160,144);
-
+function buildFrame() {
+	
+}
