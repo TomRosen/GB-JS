@@ -4,6 +4,17 @@
 		<script defer src="gb.js"></script>
 	</header>
 	<body>
+		<div id="debug">
+			<pre id="card-info"></pre>
+			<pre id="memory"></pre>
+			<pre id="register"></pre>
+			<pre id="flags"></pre>
+			<pre id="ime"></pre>
+			<pre id="pointer"></pre>
+			<pre id="mbc"></pre>
+			<pre id="instruction"></pre>
+		</div>
+		<button onclick="stopEmu = !stopEmu">Stop</button>
 		<input type="file" accept=".gb" onchange="openFile(event)" />
         <canvas id="screen" width="160" height="144" style="border: 1px solid black;"></canvas>
 	</body>
