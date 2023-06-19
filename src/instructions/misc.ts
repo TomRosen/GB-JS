@@ -1,35 +1,36 @@
 import { flags } from "../gb/flags";
 import { read, write } from "../gb/memory";
-import { register, A, F, B, C, D, E, H, L } from "../gb/register";
+import { register, A, H, L } from "../gb/register";
+import { CpuPointer as r, CpuControl as cc } from "../gb";
 
 export function nop() {
   return () => {
-    PC += 1;
+    r.PC += 1;
     return 4;
   };
 }
 
-export function swap(a) {
+export function swap(a: number) {
   return () => {
     if (a == 321) {
       //swap at location (HL)
       var m = read((register[H] << 8) + register[L]);
-      n = (m << (4 + m)) >>> 4;
+      var n = (m << (4 + m)) >>> 4;
       write((register[H] << 8) + register[L], n);
       flags.Z = n == 0 ? true : false;
       flags.N = false;
       flags.H = false;
       flags.C = false;
-      PC += 1;
+      r.PC += 1;
       return 16;
     } else {
       var m = register[a] >>> 4;
-      register[a] = register << (4 + m);
+      register[a] = register[a] << (4 + m); //verify pls
       flags.Z = register[a] == 0 ? true : false;
       flags.N = false;
       flags.H = false;
       flags.C = false;
-      PC += 1;
+      r.PC += 1;
       return 8;
     }
   };
@@ -53,7 +54,7 @@ export function daa() {
     flags.Z = register[A] == 0;
     flags.H = false;
 
-    PC += 1;
+    r.PC += 1;
     return 4;
   };
 }
@@ -66,7 +67,7 @@ export function cpl() {
     flags.N = true;
     flags.H = true;
 
-    PC += 1;
+    r.PC += 1;
     return 4;
   };
 }
@@ -79,7 +80,7 @@ export function ccf() {
 
     flags.C = !flags.C;
 
-    PC += 1;
+    r.PC += 1;
     return 4;
   };
 }
@@ -92,16 +93,16 @@ export function scf() {
 
     flags.C = true;
 
-    PC += 1;
+    r.PC += 1;
     return 4;
   };
 }
 
 export function di() {
   return () => {
-    IME = false;
+    cc.IME = false;
 
-    PC += 1;
+    r.PC += 1;
     return 4;
   };
 }
@@ -109,9 +110,9 @@ export function di() {
 export function ei() {
   //but wait until next instruction
   return () => {
-    IME = true;
+    cc.IME = true;
 
-    PC += 1;
+    r.PC += 1;
     return 4;
   };
 }
@@ -119,8 +120,8 @@ export function ei() {
 export function halt() {
   //stop cpu until next intterupt
   return () => {
-    cpuRunning = false;
-    PC += 1;
+    cc.cpuRunning = false;
+    r.PC += 1;
     return 4;
   };
 }
@@ -129,7 +130,7 @@ export function stop() {
   //halt cpu & lcd until button is pressed
   return () => {
     //todo
-    PC += 1;
+    r.PC += 1;
     return 4;
   };
 }

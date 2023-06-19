@@ -1,8 +1,9 @@
 import { flags } from "../gb/flags";
 import { read, write } from "../gb/memory";
-import { register, A, F, B, C, D, E, H, L } from "../gb/register";
+import { register } from "../gb/register";
+import { CpuPointer as r } from "../gb";
 
-export function bit(bit, a) {
+export function bit(bit: number, a: number) {
   //bit to test
   return () => {
     flags.Z = register[a] && 0x1 << bit == 0x1 << bit ? false : true;
@@ -10,12 +11,12 @@ export function bit(bit, a) {
     flags.N = false;
     flags.H = true;
 
-    PC += 1;
+    r.PC += 1;
     return 8;
   };
 }
 
-export function bit_from_mem(bit, a, b) {
+export function bit_from_mem(bit: number, a: number, b: number) {
   return () => {
     var n = read((register[a] << 8) + register[b]);
     flags.Z = n && 0x1 << bit == 0x1 << bit ? false : true;
@@ -23,23 +24,23 @@ export function bit_from_mem(bit, a, b) {
     flags.N = false;
     flags.H = true;
 
-    PC += 1;
+    r.PC += 1;
     return 16;
   };
 }
 
-export function set(bit, a) {
+export function set(bit: number, a: number) {
   //set bit b in flag
   return () => {
     let m = 0x1 << bit;
     register[a] |= m;
 
-    PC += 1;
+    r.PC += 1;
     return 8;
   };
 }
 
-export function set_from_mem(bit, a, b) {
+export function set_from_mem(bit: number, a: number, b: number) {
   //set bit in memory
   return () => {
     let m = 0x1 << bit;
@@ -47,23 +48,23 @@ export function set_from_mem(bit, a, b) {
     n |= m;
     write((register[a] << 8) + register[b], n);
 
-    PC += 1;
+    r.PC += 1;
     return 16;
   };
 }
 
-export function res(bit, a) {
+export function res(bit: number, a: number) {
   //reset bit b in flag
   return () => {
     let m = 0x1 << bit;
     register[a] &= ~m;
 
-    PC += 1;
+    r.PC += 1;
     return 8;
   };
 }
 
-export function res_from_mem(bit, a, b) {
+export function res_from_mem(bit: number, a: number, b: number) {
   //reset bit in memory
   return () => {
     let m = 0x1 << bit;
@@ -71,7 +72,7 @@ export function res_from_mem(bit, a, b) {
     n &= ~m;
     write((register[a] << 8) + register[b], n);
 
-    PC += 1;
+    r.PC += 1;
     return 16;
   };
 }

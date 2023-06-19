@@ -1,16 +1,15 @@
-import { flags } from "../gb/flags";
-import { read, write } from "../gb/memory";
-import { register, A, F, B, C, D, E, H, L } from "../gb/register";
+import { read, write16bit } from "../gb/memory";
+import { CpuPointer as r } from "../gb";
 
-export function call(con) {
+export function call(con: boolean) {
   //Push address of next instruction onto stack and then jump to address nn.
   return () => {
-    if (con || con == null) {
-      SP -= 2;
-      write16bit(SP, (PC + 3) >> 8, (PC + 3) & 0xff); // maybe write upper lower nibble as one byte?
-      PC = read(PC + 1) + (read(PC + 2) << 8);
+    if (con) {
+      r.SP -= 2;
+      write16bit(r.SP, (r.PC + 3) >> 8, (r.PC + 3) & 0xff); // maybe write upper lower nibble as one byte?
+      r.PC = read(r.PC + 1) + (read(r.PC + 2) << 8);
     } else {
-      PC += 3;
+      r.PC += 3;
     }
 
     return 12;

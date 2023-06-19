@@ -56,6 +56,7 @@ import {
 import { A, F, B, C, D, E, H, L } from "../gb/register";
 import { flags } from "../gb/flags";
 import { read } from "../gb/memory";
+import { CpuPointer as r, spimm, imm } from "../gb";
 
 //opcode array
 var opcodes = new Array(0x1000);
@@ -68,7 +69,7 @@ opcodes[0x04] = inc(B, B); //inc B
 opcodes[0x05] = dec(B, B); //dec B
 opcodes[0x06] = ld_imm(B); //ld B,n
 opcodes[0x07] = rl(A, false, true); //rlca
-opcodes[0x08] = ld16(SP, SP, spimm); //ld (nn),SP
+opcodes[0x08] = ld16(r.SP, r.SP, spimm); //ld (nn),SP
 opcodes[0x09] = add16(B, C, null); //add HL,BC
 opcodes[0x0a] = ld_from_mem(A, B, C); //ld A,(BC)
 opcodes[0x0b] = dec16(B, C); //dec BC
@@ -84,7 +85,7 @@ opcodes[0x14] = inc(D, D); //inc D
 opcodes[0x15] = dec(D, D); //dec D
 opcodes[0x16] = ld_imm(D); //ld D,n
 opcodes[0x17] = rl(A, true, true); //rla
-opcodes[0x18] = jump_add_imm(null); //JR n
+opcodes[0x18] = jump_add_imm(true); //JR n
 opcodes[0x19] = add16(D, E, null); //add HL,DE
 opcodes[0x1a] = ld_from_mem(A, D, E); //ld A,(DE)
 opcodes[0x1b] = dec16(D, E); //dec DE
@@ -109,17 +110,17 @@ opcodes[0x2d] = dec(L, L); //dec L
 opcodes[0x2e] = ld_imm(L); //ld L,n
 opcodes[0x2f] = cpl(); //cpl
 opcodes[0x30] = jump_add_imm(!flags.C); //JR NC,*
-opcodes[0x31] = ld(SP, spimm, spimm); //ld SP,nn
+opcodes[0x31] = ld16(r.SP, spimm, spimm); //ld SP,nn
 opcodes[0x32] = ldd(321, A); //ld (HL-),A
-opcodes[0x33] = inc16(SP, null); //inc SP
+opcodes[0x33] = inc16(r.SP, null); //inc SP
 opcodes[0x34] = inc(H, L); //inc (HL)
 opcodes[0x35] = dec(H, L); //dec (HL)
 opcodes[0x36] = ld_to_mem_imm(H, L); //ld (HL),n
 opcodes[0x37] = scf(); //scf
 opcodes[0x38] = jump_add_imm(flags.C); //JR C,*
-opcodes[0x39] = add16(SP, SP, null); //add SP,HL
+opcodes[0x39] = add16(r.SP, r.SP, null); //add SP,HL
 opcodes[0x3a] = ldd(A, 321); //ld A,(HL-)
-opcodes[0x3b] = dec16(SP, null); //dec SP
+opcodes[0x3b] = dec16(r.SP, null); //dec SP
 opcodes[0x3c] = inc(A, A); //inc A
 opcodes[0x3d] = dec(A, A); //dec A
 opcodes[0x3e] = ld_imm(A); //ld A,#
@@ -255,19 +256,19 @@ opcodes[0xbf] = cp(A); //cp A
 opcodes[0xc0] = ret(!flags.Z); //ret NZ
 opcodes[0xc1] = pop(B, C); //pop BC
 opcodes[0xc2] = jump_from_mem_imm(!flags.Z); // jp NZ,nn
-opcodes[0xc3] = jump_from_mem_imm(null); // jp nn
+opcodes[0xc3] = jump_from_mem_imm(true); // jp nn
 opcodes[0xc4] = call(!flags.Z); // call NZ,nn
 opcodes[0xc5] = push(B, C); //push BC
 opcodes[0xc6] = add_from_mem(A, imm); //add A,#
 opcodes[0xc7] = rst(0x00); //rst 00H
 opcodes[0xc8] = ret(flags.Z); //ret Z
-opcodes[0xc9] = ret(null); //ret
+opcodes[0xc9] = ret(true); //ret
 opcodes[0xca] = jump_from_mem_imm(flags.Z); // jp Z,nn
 opcodes[0xcb] = function () {
-  return cbcodes[read(++PC)]();
+  return cbcodes[read(++r.PC)]();
 }; //prefix cb
 opcodes[0xcc] = call(flags.Z); // call Z,nn
-opcodes[0xcd] = call(null); // call nn
+opcodes[0xcd] = call(true); // call nn
 opcodes[0xce] = adc_from_mem(A, imm); //adc A,#
 opcodes[0xcf] = rst(0x08); //rest 08H
 opcodes[0xd0] = ret(!flags.C); //ret NC
@@ -279,7 +280,7 @@ opcodes[0xd5] = push(D, E); //push DE
 opcodes[0xd6] = sub_from_mem(A, imm); //sub #
 opcodes[0xd7] = rst(0x10); //rest 10H
 opcodes[0xd8] = ret(flags.C); //ret C
-opcodes[0xd9] = ret(null, true); //reti
+opcodes[0xd9] = ret(true, true); //reti
 opcodes[0xda] = jump_from_mem_imm(flags.C); // jp C,nn
 opcodes[0xdb] = unused;
 opcodes[0xdc] = call(flags.C); // call C,nn
@@ -294,13 +295,13 @@ opcodes[0xe4] = unused;
 opcodes[0xe5] = push(H, L); //push HL
 opcodes[0xe6] = and_from_mem(A, imm); //and #
 opcodes[0xe7] = rst(0x20); //rst 20H
-opcodes[0xe8] = add16(SP, SP, spimm); //add SP,#
+opcodes[0xe8] = add16(r.SP, r.SP, spimm); //add SP,#
 opcodes[0xe9] = jump_hl(); //JP (HL)
 opcodes[0xea] = ld_to_mem_imm(A, imm); //ld (nn),A
 opcodes[0xeb] = unused;
 opcodes[0xec] = unused;
 opcodes[0xed] = unused;
-opcodes[0xee] = xor(A, imm); //xor #
+opcodes[0xee] = xor_from_mem(A, imm); //xor #  //arguments don't matter
 opcodes[0xef] = rst(0x28); //rst 28H
 opcodes[0xf0] = ldh(A, imm); //ld A,($FF00+n)
 opcodes[0xf1] = pop(A, F); //pop AF
@@ -311,12 +312,12 @@ opcodes[0xf5] = push(A, F); //push AF
 opcodes[0xf6] = or_from_mem(A, imm); //or #
 opcodes[0xf7] = rst(0x30); //rst 30H
 opcodes[0xf8] = ldhl(); //ldhl SP,n
-opcodes[0xf9] = ld16(null, SP, null); //ld SP,HL
+opcodes[0xf9] = ld16(0, r.SP, 0); //ld SP,HL
 opcodes[0xfa] = ld_from_mem_imm(A); //ldd A,(nn)
 opcodes[0xfb] = ei(); //ei
 opcodes[0xfc] = unused;
 opcodes[0xfd] = unused;
-opcodes[0xfe] = cp(A, imm); //cp #
+opcodes[0xfe] = cp_from_mem(A, imm); //cp #  //arguments don't matter
 opcodes[0xff] = rst(0x38); //rst 38H
 
 var cbcodes = new Array(0x1000);

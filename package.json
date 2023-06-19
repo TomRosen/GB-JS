@@ -1,0 +1,27 @@
+{
+  "dependencies": {
+    "vite": "^4.3.9"
+  },
+  "name": "gb.js",
+  "description": "JavaScript Gameboy emulator",
+  "version": "0.0.0",
+  "main": "./dist/gb.js",
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tomrosen/gb-js.git"
+  },
+  "keywords": [
+    "emulator",
+    "gameboy"
+  ],
+  "author": "Tom Rosen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tomrosen/gb-js/issues"
+  },
+  "homepage": "https://github.com/tomrosen/gb-js#readme"
+}

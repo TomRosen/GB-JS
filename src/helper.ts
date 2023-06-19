@@ -4,5 +4,5 @@ export function dec2bin(dec: number): string {
 
 export function signed(a: number): number {
   if (a > 127) return a - 256;
-  else a;
+  else return a;
 }

@@ -1,4 +1,4 @@
-let register = new Uint8Array(8); //cpu reg
+let register: Uint8Array = new Uint8Array(8); //cpu reg
 
 //cpu reg addresses
 const A = 7; //Accumulator register

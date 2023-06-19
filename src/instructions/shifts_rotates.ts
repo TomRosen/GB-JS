@@ -1,8 +1,9 @@
 import { flags } from "../gb/flags";
 import { read, write } from "../gb/memory";
-import { register, A, F, B, C, D, E, H, L } from "../gb/register";
+import { register } from "../gb/register";
+import { CpuPointer as r } from "../gb";
 
-export function rl(a, c, rla) {
+export function rl(a: number, c: boolean, rla: boolean) {
   //c = through Carry  |rla  = used RLA instead of RL A
   return () => {
     if (c == true) {
@@ -21,13 +22,13 @@ export function rl(a, c, rla) {
     flags.N = false;
     flags.H = false;
     flags.Z = register[a] == 0 ? true : false;
-    PC += 1;
-    let r = rla == true ? 4 : 8;
-    return r;
+    r.PC += 1;
+    let rc = rla == true ? 4 : 8;
+    return rc;
   };
 }
 
-export function rl_from_mem(a, b, c) {
+export function rl_from_mem(a: number, b: number, c: boolean) {
   //a,b mem location
   return () => {
     var n = read((register[a] << 8) + register[b]);
@@ -48,12 +49,12 @@ export function rl_from_mem(a, b, c) {
     flags.H = false;
     flags.Z = n == 0 ? true : false;
     write((register[a] << 8) + register[b], n);
-    PC += 1;
+    r.PC += 1;
     return 16;
   };
 }
 
-export function rr(a, c, rla) {
+export function rr(a: number, c: boolean, rla: boolean) {
   //c = through Carry  |rla  = used RLA instead of RL A
   return () => {
     if (c == true) {
@@ -73,13 +74,13 @@ export function rr(a, c, rla) {
     flags.H = false;
     flags.Z = register[a] == 0 ? true : false;
 
-    PC += 1;
-    let r = rla == true ? 4 : 8;
-    return r;
+    r.PC += 1;
+    let rc = rla == true ? 4 : 8;
+    return rc;
   };
 }
 
-export function rr_from_mem(a, b, c) {
+export function rr_from_mem(a: number, b: number, c: boolean) {
   //a,b mem location
   return () => {
     var n = read((register[a] << 8) + register[b]);
@@ -101,26 +102,26 @@ export function rr_from_mem(a, b, c) {
     flags.Z = n == 0 ? true : false;
     write((register[a] << 8) + register[b], n);
 
-    PC += 1;
+    r.PC += 1;
     return 16;
   };
 }
 
-export function sl(a) {
+export function sl(a: number) {
   return () => {
-    flags.C = register[a] && 0x80 == 0x80 ? true : false; //move bit 7 to C flag
+    flags.C = register[a] && 0x80 == 0x80 ? true : false; //move bit 7 to Carry flag
     register[a] = register[a] << 1;
 
     flags.N = false;
     flags.H = false;
     flags.Z = register[a] == 0 ? true : false;
 
-    PC += 1;
+    r.PC += 1;
     return 8;
   };
 }
 
-export function sl_from_mem(a, b) {
+export function sl_from_mem(a: number, b: number) {
   return () => {
     var n = read((register[a] << 8) + register[b]);
     flags.C = n && 0x80 == 0x80 ? true : false; //move bit 7 to C flag
@@ -131,15 +132,15 @@ export function sl_from_mem(a, b) {
     flags.Z = n == 0 ? true : false;
     write((register[a] << 8) + register[b], n);
 
-    PC += 1;
+    r.PC += 1;
     return 16;
   };
 }
 
-export function sr(a, fbz) {
+export function sr(a: number, fbz: boolean) {
   //fbz = first bit to zero
   return () => {
-    flags.C = n && 0x1 == 0x1 ? true : false; //move bit 0 to C flag
+    flags.C = register[a] && 0x1 == 0x1 ? true : false; //move bit 0 to C flag
     if (fbz == true) register[a] = register[a] >>> 1;
     else register[a] = register[a] >> 1;
 
@@ -147,12 +148,12 @@ export function sr(a, fbz) {
     flags.H = false;
     flags.Z = register[a] == 0 ? true : false;
 
-    PC += 1;
+    r.PC += 1;
     return 8;
   };
 }
 
-export function sr_from_mem(a, b, fbz) {
+export function sr_from_mem(a: number, b: number, fbz: boolean) {
   return () => {
     var n = read((register[a] << 8) + register[b]);
     flags.C = n && 0x1 == 0x1 ? true : false; //move bit 0 to C flag
@@ -164,7 +165,7 @@ export function sr_from_mem(a, b, fbz) {
     flags.Z = n == 0 ? true : false;
     write((register[a] << 8) + register[b], n);
 
-    PC += 1;
+    r.PC += 1;
     return 16;
   };
 }
